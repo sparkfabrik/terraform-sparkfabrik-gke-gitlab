@@ -70,7 +70,7 @@ resource "random_id" "postgres_suffix" {
 # Services
 module "project_services" {
   source  = "terraform-google-modules/project-factory/google//modules/project_services"
-  version = "~> 15.0.0"
+  version = "~> 16.0.0"
 
   project_id                  = var.project_id
   disable_services_on_destroy = false
