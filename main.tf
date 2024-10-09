@@ -349,7 +349,7 @@ resource "google_storage_bucket_iam_binding" "gitlab_bucket_iam_binding_admin" {
 # GKE Cluster
 module "gke" {
   source  = "terraform-google-modules/kubernetes-engine/google//modules/beta-private-cluster"
-  version = "~> 31.1.0"
+  version = "~> 33.1.0"
 
   # Create an implicit dependency on service activation
   project_id = module.project_services.project_id
