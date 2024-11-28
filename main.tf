@@ -598,7 +598,7 @@ module "gitlab_servicedesk_pass" {
   k8s_secret_name = local.gitlab_servicedesk_k8ssecret
   k8s_secret_key  = "password"
 
-  count      = var.gitlab_enable_service_desk ? 1 : 0
+  count      = length(var.gitlab_service_desk_mail_address) > 0 ? 1 : 0
   depends_on = [kubernetes_namespace.gitlab_namespace]
 }
 
