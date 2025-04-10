@@ -7,9 +7,11 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.26.3](https://www.github.com/terraform-google-modules/terraform-google-gke-gitlab/compare/v2.26.2...v2.26.3) (2025-08-04)
+
 ### Changed
 
-- Feature - refs platform/#2564: add `ssl-reject-handshake` nginx ingress configuration option.
+- Feature - refs platform/#3765: PostgreSQL Enable Instance deletion prevention.
 
 ## [0.5.2](https://www.github.com/terraform-google-modules/terraform-google-gke-gitlab/compare/v0.5.1...v0.5.2) (2021-04-23)
 
