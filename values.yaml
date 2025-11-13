@@ -258,6 +258,10 @@ gitlab:
     enabled: ${ENABLE_PROM_EXPORTER}
   ## https://docs.gitlab.com/charts/charts/gitlab/toolbox
   toolbox:
+%{ if length(BACKUP_JOB_VOLUME_FSGROUP_POLICY) > 0 ~}
+    securityContext:
+      fsGroupChangePolicy: ${BACKUP_JOB_VOLUME_FSGROUP_POLICY}
+%{ endif ~}
     backups:
       cron:
         enabled: ${ENABLE_CRON_BACKUP}
