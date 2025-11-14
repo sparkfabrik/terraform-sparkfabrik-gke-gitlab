@@ -895,3 +895,13 @@ variable "gitlab_log_level" {
     error_message = "Log level must be an integer between 0-5 or a valid log level (debug, info, warn, error, fatal, unknown). Case-insensitive."
   }
 }
+
+variable "gitlab_backup_job_volume_fsgroup_policy" {
+  type        = string
+  description = "Sets the fsGroupChangePolicy for the backup job volume. Supported values: 'OnRootMismatch', 'Always'. If not set, the fsGroupChangePolicy will not be specified."
+  default     = ""
+  validation {
+    condition     = var.gitlab_backup_job_volume_fsgroup_policy == "" || contains(["OnRootMismatch", "Always"], var.gitlab_backup_job_volume_fsgroup_policy)
+    error_message = "Value for fsGroupChangePolicy must be either OnRootMismatch or Always if specified."
+  }
+}
