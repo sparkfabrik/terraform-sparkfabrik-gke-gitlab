@@ -156,17 +156,6 @@ module "cloud_nat" {
   log_config_filter                   = var.cloud_nat_log_config_filter
 }
 
-resource "google_compute_firewall" "admission_webhook" {
-  name    = "gitlab-ingress-nginx-admission-webhook"
-  network = google_compute_network.gitlab.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = ["8443"]
-  }
-  source_ranges = [module.gke.master_ipv4_cidr_block]
-}
-
 # Database
 resource "google_compute_global_address" "gitlab_sql" {
   provider      = google-beta
