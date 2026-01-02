@@ -369,18 +369,18 @@ module "gke" {
   regional           = true
   kubernetes_version = var.gke_version
 
-  network           = google_compute_network.gitlab.name
-  subnetwork        = google_compute_subnetwork.subnetwork.name
-  ip_range_pods     = local.subnet_name_pod_cidr
-  ip_range_services = local.subnet_name_service_cidr
-
-  enable_private_endpoint = false
-  enable_private_nodes    = true
-  release_channel         = "STABLE"
-  maintenance_start_time  = "03:00"
-  network_policy          = false
-  enable_shielded_nodes   = true
-  dns_cache               = true
+  network                           = google_compute_network.gitlab.name
+  subnetwork                        = google_compute_subnetwork.subnetwork.name
+  ip_range_pods                     = local.subnet_name_pod_cidr
+  ip_range_services                 = local.subnet_name_service_cidr
+  add_master_webhook_firewall_rules = var.gke_add_master_webhook_firewall_rules
+  enable_private_endpoint           = false
+  enable_private_nodes              = true
+  release_channel                   = "STABLE"
+  maintenance_start_time            = "03:00"
+  network_policy                    = false
+  enable_shielded_nodes             = true
+  dns_cache                         = true
 
   remove_default_node_pool = true
 
