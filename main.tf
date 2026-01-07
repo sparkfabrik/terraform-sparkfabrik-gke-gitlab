@@ -156,17 +156,6 @@ module "cloud_nat" {
   log_config_filter                   = var.cloud_nat_log_config_filter
 }
 
-resource "google_compute_firewall" "admission_webhook" {
-  name    = "gitlab-ingress-nginx-admission-webhook"
-  network = google_compute_network.gitlab.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = ["8443"]
-  }
-  source_ranges = [module.gke.master_ipv4_cidr_block]
-}
-
 # Database
 resource "google_compute_global_address" "gitlab_sql" {
   provider      = google-beta
@@ -369,18 +358,18 @@ module "gke" {
   regional           = true
   kubernetes_version = var.gke_version
 
-  network           = google_compute_network.gitlab.name
-  subnetwork        = google_compute_subnetwork.subnetwork.name
-  ip_range_pods     = local.subnet_name_pod_cidr
-  ip_range_services = local.subnet_name_service_cidr
-
-  enable_private_endpoint = false
-  enable_private_nodes    = true
-  release_channel         = "STABLE"
-  maintenance_start_time  = "03:00"
-  network_policy          = false
-  enable_shielded_nodes   = true
-  dns_cache               = true
+  network                           = google_compute_network.gitlab.name
+  subnetwork                        = google_compute_subnetwork.subnetwork.name
+  ip_range_pods                     = local.subnet_name_pod_cidr
+  ip_range_services                 = local.subnet_name_service_cidr
+  add_master_webhook_firewall_rules = var.gke_add_master_webhook_firewall_rules
+  enable_private_endpoint           = false
+  enable_private_nodes              = true
+  release_channel                   = "STABLE"
+  maintenance_start_time            = "03:00"
+  network_policy                    = false
+  enable_shielded_nodes             = true
+  dns_cache                         = true
 
   remove_default_node_pool = true
 

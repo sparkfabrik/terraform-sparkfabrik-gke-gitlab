@@ -62,6 +62,7 @@ Then perform the following commands on the root folder:
 | gitlab\_backup\_extra\_args | Add a string of extra arguments for the gitlab backup-utility. | `string` | `""` | no |
 | gitlab\_backup\_job\_nodeselector | Map of node selector labels for backup jobs | `map(string)` | `{}` | no |
 | gitlab\_backup\_job\_tolerations | List of tolerations for backup jobs | <pre>list(object({<br>    key      = string<br>    value    = string<br>    operator = string<br>    effect   = string<br>  }))</pre> | `[]` | no |
+| gitlab\_backup\_job\_volume\_fsgroup\_policy | Sets the fsGroupChangePolicy for the backup job volume. Supported values: 'OnRootMismatch', 'Always'. If not set, the fsGroupChangePolicy will not be specified. | `string` | `""` | no |
 | gitlab\_backup\_pv\_size | Set the size of the additional storage for Backup TAR Creation | `number` | `100` | no |
 | gitlab\_db\_name | Instance name for the GitLab Postgres database. | `string` | `"gitlab-db"` | no |
 | gitlab\_enable\_backup\_pv | Enable additional storage for TAR backup creation of any appreciable size | `bool` | `false` | no |
@@ -112,6 +113,7 @@ Then perform the following commands on the root folder:
 | gitlab\_service\_desk\_mail\_address | Email Address for Service Desk Service | `string` | `""` | no |
 | gitlab\_smtp\_user | Setup email sender address for Gitlab smtp server to send emails. | `string` | `"user@example.com"` | no |
 | gitlab\_time\_zone | Setup timezone for gitlab containers | `string` | `"Europe/Rome"` | no |
+| gke\_add\_master\_webhook\_firewall\_rules | Create firewall rules to allow GKE master to communicate with cluster nodes for webhook functionality. Default true | `bool` | `true` | no |
 | gke\_additional\_node\_pools | Additional node pools to create in the cluster | `list(map(any))` | `[]` | no |
 | gke\_auto\_repair | Enable auto repair for the cluster. Default true | `bool` | `true` | no |
 | gke\_auto\_scaling | Enable auto scaling for the cluster. Default true | `bool` | `true` | no |
@@ -150,7 +152,7 @@ Then perform the following commands on the root folder:
 | gke\_storage\_class | Default storage class for GKE Cluster. Default pd-sdd | `string` | `"pd-ssd"` | no |
 | gke\_storage\_class\_reclaim\_policy | Set storage class reclaim policy. Default Retain | `string` | `"Retain"` | no |
 | gke\_version | Version of GKE to use for the GitLab cluster | `string` | `"latest"` | no |
-| helm\_chart\_version | Helm chart version to install during deployment - Default Gitlab 14.9.3 | `string` | `"5.9.3"` | no |
+| helm\_chart\_version | Helm chart version to install during deployment - Default Gitlab 18.2.4 | `string` | `"9.2.4"` | no |
 | postgresql\_availability\_type | The availability type of the Cloud SQL instance, high availability (REGIONAL) or single zone (ZONAL). | `string` | `"REGIONAL"` | no |
 | postgresql\_backup\_retained\_count | Numeber of postgres backup to be retained. Default 30. | `number` | `"30"` | no |
 | postgresql\_backup\_start\_time | HH:MM format time indicating when postgres backup configuration starts. | `string` | `"02:00"` | no |

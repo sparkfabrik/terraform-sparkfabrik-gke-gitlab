@@ -457,6 +457,12 @@ variable "gke_gce_pd_csi_driver" {
   default     = true
 }
 
+variable "gke_add_master_webhook_firewall_rules" {
+  type        = bool
+  description = "Create firewall rules to allow GKE master to communicate with cluster nodes for webhook functionality. Default true"
+  default     = true
+}
+
 ##################
 # GITLAB SECTION #
 ##################
