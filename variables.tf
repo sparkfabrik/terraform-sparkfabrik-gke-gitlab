@@ -311,6 +311,24 @@ variable "gke_version" {
   default     = "latest"
 }
 
+variable "gke_maintenance_start_time" {
+  type        = string
+  description = "Start time for GKE maintenance window in RFC3339 format."
+  default     = "1970-01-01T00:30:00Z"
+}
+
+variable "gke_maintenance_end_time" {
+  type        = string
+  description = "End time for GKE maintenance window in RFC3339 format."
+  default     = "1970-01-01T04:30:00Z"
+}
+
+variable "gke_maintenance_recurrence" {
+  type        = string
+  description = "Recurrence rule for the GKE maintenance window in RRULE format."
+  default     = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+}
+
 variable "gke_nodes_subnet_cidr" {
   type        = string
   default     = "10.10.0.0/16"
