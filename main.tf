@@ -366,7 +366,9 @@ module "gke" {
   enable_private_endpoint           = false
   enable_private_nodes              = true
   release_channel                   = "STABLE"
-  maintenance_start_time            = "03:00"
+  maintenance_start_time            = var.gke_maintenance_start_time
+  maintenance_end_time              = var.gke_maintenance_end_time
+  maintenance_recurrence            = var.gke_maintenance_recurrence
   network_policy                    = false
   enable_shielded_nodes             = true
   dns_cache                         = true
