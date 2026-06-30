@@ -142,6 +142,7 @@ Then perform the following commands on the root folder:
 | gke\_max\_node\_count | Define the maximum number of nodes of the autoscaling cluster. Default 5 | `number` | `5` | no |
 | gke\_min\_node\_count | Define the minimum number of nodes of the autoscaling cluster. Default 1 | `number` | `1` | no |
 | gke\_monitoring\_enable\_managed\_prometheus | Whether Google Managed Service for Prometheus managed collection is enabled on the cluster. | `bool` | `false` | no |
+| gke\_monitoring\_enabled\_components | Monitoring components to enable when managed collection is on. Defaults to SYSTEM\_COMPONENTS so enabling managed Prometheus does not disable GKE system metrics. Only applied when gke\_monitoring\_enable\_managed\_prometheus is true. | `list(string)` | <pre>[<br/>  "SYSTEM\_COMPONENTS"<br/>]</pre> | no |
 | gke\_node\_count | Define the number of nodes of the cluster. Default 1 | `number` | `1` | no |
 | gke\_node\_pool\_description | Description of the node pool for the GitLab cluster | `string` | `"Gitlab Cluster"` | no |
 | gke\_node\_pool\_name | Name of the node pool for the GitLab cluster | `string` | `"gitlab"` | no |

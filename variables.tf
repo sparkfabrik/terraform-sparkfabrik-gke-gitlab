@@ -383,6 +383,12 @@ variable "gke_monitoring_enable_managed_prometheus" {
   default     = false
 }
 
+variable "gke_monitoring_enabled_components" {
+  type        = list(string)
+  description = "Monitoring components to enable when managed collection is on. Defaults to SYSTEM_COMPONENTS so enabling managed Prometheus does not disable GKE system metrics. Only applied when gke_monitoring_enable_managed_prometheus is true."
+  default     = ["SYSTEM_COMPONENTS"]
+}
+
 variable "gke_enable_istio_addon" {
   type        = bool
   description = "Enable Istio addon"
