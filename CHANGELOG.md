@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.33.0] - 2026-06-30
+
 ### Changed
 
 - Feature - refs sparkfabrik-innovation-team/board#4564: add `gke_monitoring_enable_managed_prometheus` variable to enable Google Managed Service for Prometheus managed collection on the cluster.
