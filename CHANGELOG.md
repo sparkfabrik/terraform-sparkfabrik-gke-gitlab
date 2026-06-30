@@ -9,6 +9,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Feature - refs sparkfabrik-innovation-team/board#4564: add `gke_monitoring_enable_managed_prometheus` variable to enable Google Managed Service for Prometheus managed collection on the cluster.
 - Feature - refs platform/#2564: add `ssl-reject-handshake` nginx ingress configuration option.
 
 ## [0.5.2](https://www.github.com/terraform-google-modules/terraform-google-gke-gitlab/compare/v0.5.1...v0.5.2) (2021-04-23)
