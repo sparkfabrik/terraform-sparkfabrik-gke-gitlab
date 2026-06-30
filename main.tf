@@ -387,8 +387,12 @@ module "gke" {
 
   cluster_autoscaling = var.gke_cluster_autoscaling
 
-  # Google Managed Service for Prometheus (managed collection)
+  # Google Managed Service for Prometheus (managed collection).
+  # Enabling managed collection activates the cluster monitoring_config block,
+  # whose enable_components defaults to empty. Set the components explicitly so
+  # GKE system metrics are retained instead of being dropped.
   monitoring_enable_managed_prometheus = var.gke_monitoring_enable_managed_prometheus
+  monitoring_enabled_components        = var.gke_monitoring_enable_managed_prometheus ? var.gke_monitoring_enabled_components : []
 
   node_pools = concat(
     [
