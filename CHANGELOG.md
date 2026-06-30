@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.34.0] - 2026-06-30
+
 ### Fixed
 
 - Fix - refs sparkfabrik-innovation-team/board#4565: keep `SYSTEM_COMPONENTS` monitoring when enabling managed Prometheus. Enabling `gke_monitoring_enable_managed_prometheus` activates the cluster `monitoring_config` block, whose `enable_components` defaults to empty and previously dropped GKE system metrics. A new `gke_monitoring_enabled_components` variable (default `["SYSTEM_COMPONENTS"]`) is now applied so system metrics are retained.
