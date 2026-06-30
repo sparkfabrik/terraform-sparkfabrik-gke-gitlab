@@ -377,6 +377,12 @@ variable "gke_enable_backup_agent" {
   default     = false
 }
 
+variable "gke_monitoring_enable_managed_prometheus" {
+  type        = bool
+  description = "Whether Google Managed Service for Prometheus managed collection is enabled on the cluster."
+  default     = false
+}
+
 variable "gke_enable_istio_addon" {
   type        = bool
   description = "Enable Istio addon"

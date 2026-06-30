@@ -141,6 +141,7 @@ Then perform the following commands on the root folder:
 | gke\_maintenance\_start\_time | Start time for GKE maintenance window in RFC3339 format. | `string` | `"1970-01-01T00:30:00Z"` | no |
 | gke\_max\_node\_count | Define the maximum number of nodes of the autoscaling cluster. Default 5 | `number` | `5` | no |
 | gke\_min\_node\_count | Define the minimum number of nodes of the autoscaling cluster. Default 1 | `number` | `1` | no |
+| gke\_monitoring\_enable\_managed\_prometheus | Whether Google Managed Service for Prometheus managed collection is enabled on the cluster. | `bool` | `false` | no |
 | gke\_node\_count | Define the number of nodes of the cluster. Default 1 | `number` | `1` | no |
 | gke\_node\_pool\_description | Description of the node pool for the GitLab cluster | `string` | `"Gitlab Cluster"` | no |
 | gke\_node\_pool\_name | Name of the node pool for the GitLab cluster | `string` | `"gitlab"` | no |

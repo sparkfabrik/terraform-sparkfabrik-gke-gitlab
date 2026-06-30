@@ -387,6 +387,9 @@ module "gke" {
 
   cluster_autoscaling = var.gke_cluster_autoscaling
 
+  # Google Managed Service for Prometheus (managed collection)
+  monitoring_enable_managed_prometheus = var.gke_monitoring_enable_managed_prometheus
+
   node_pools = concat(
     [
       {
