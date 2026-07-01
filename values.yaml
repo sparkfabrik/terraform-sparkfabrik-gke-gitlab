@@ -257,24 +257,45 @@ gitlab:
   gitlab-exporter:
     enabled: ${ENABLE_PROM_EXPORTER}
     # gitlab-exporter's DB probes fail against a Cloud SQL instance that requires
-    # a client certificate. Root cause: the chart mounts the psql client cert
-    # only in the exporter's `configure` init container, not its main container,
-    # so libpq cannot present it and falls back to a non-SSL connection that
-    # pg_hba rejects. The postgresql-ssl-secrets volume already exists at pod
-    # level; mounting it into the main container is the fix (verified live: with
-    # the certs present the exporter negotiates SSL and connects, no pg_hba error).
+    # a client certificate: the chart mounts the psql client cert only in the
+    # exporter's `configure` init container, not its main container, so libpq
+    # cannot present it and the connection is rejected. Give the main container
+    # its own mount of the client certificate.
     #
-    # The mount MUST NOT be nested under /etc/gitlab. The chart mounts the
-    # `gitlab-exporter-secrets` emptyDir at /etc/gitlab with readOnly: true, so a
-    # nested mount at /etc/gitlab/postgres/ssl forces kubelet to create the
-    # mountpoint inside a read-only mount, which fails with "read-only file
-    # system" and crash-loops the container. Mount at the non-nested /etc/postgresql/ssl
-    # instead (rootfs is writable, the container has no readOnlyRootFilesystem) and
-    # point the exporter's PGSSL* at that path, overriding the global.extraEnv
-    # defaults which target /etc/gitlab/postgres/ssl for the Rails apps.
-    # Related upstream gap: https://gitlab.com/gitlab-org/charts/gitlab/-/issues/1817
+    # Two traps make this non-trivial, both learned the hard way in production:
+    #
+    # 1. The mount MUST NOT be nested under /etc/gitlab. The chart mounts the
+    #    `gitlab-exporter-secrets` emptyDir at /etc/gitlab with readOnly: true, so
+    #    a nested mount at /etc/gitlab/postgres/ssl forces kubelet to create the
+    #    mountpoint inside a read-only mount and fails with "read-only file
+    #    system", crash-looping the container. Mount at the non-nested
+    #    /etc/postgresql/ssl instead (the container has no readOnlyRootFilesystem,
+    #    so the writable rootfs can host a fresh mountpoint).
+    #
+    # 2. The certificate volume MUST be group-readable but not group-writable.
+    #    The chart's shared `postgresql-ssl-secrets` volume renders the key file
+    #    as mode 0660 (group write), which libpq refuses ("private key file has
+    #    group or world access"). The main container runs as uid/gid 1000 (git),
+    #    so define our own volume from the mTLS secret with defaultMode 0440
+    #    (root:git, group read only): libpq accepts it and uid 1000 can read it.
+    #
+    # PGSSL* is set here to point the exporter's libpq at this path, overriding the
+    # global.extraEnv defaults which target /etc/gitlab/postgres/ssl for the Rails
+    # apps. Related upstream gap: https://gitlab.com/gitlab-org/charts/gitlab/-/issues/1817
+    extraVolumes: |
+      - name: exporter-postgres-ssl
+        secret:
+          secretName: gitlab-postgres-mtls
+          defaultMode: 0440
+          items:
+            - key: cert
+              path: client-certificate.pem
+            - key: private_key
+              path: client-key.pem
+            - key: server_ca_cert
+              path: server-ca.pem
     extraVolumeMounts: |
-      - name: postgresql-ssl-secrets
+      - name: exporter-postgres-ssl
         mountPath: /etc/postgresql/ssl
         readOnly: true
     extraEnv:
