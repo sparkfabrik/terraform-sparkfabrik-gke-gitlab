@@ -7,6 +7,12 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.34.2] - 2026-07-01
+
+### Fixed
+
+- Fix - refs https://gitlab.sparkfabrik.com/sparkfabrik-innovation-team/board/-/work_items/4574: correct the gitlab-exporter Postgres SSL mount path introduced in 2.34.1. Mounting the client certificate at `/etc/gitlab/postgres/ssl` nested it inside the chart's read-only `/etc/gitlab` mount (the `gitlab-exporter-secrets` emptyDir), so kubelet could not create the mountpoint and the container crash-looped with "read-only file system". Mount the certificate at the non-nested `/etc/postgresql/ssl` instead, and set the exporter's `PGSSLCERT`, `PGSSLKEY`, and `PGSSLROOTCERT` to that path (overriding the `global.extraEnv` defaults that target `/etc/gitlab/postgres/ssl` for the Rails apps). Verified live: the exporter starts and connects to Cloud SQL over mTLS with no `pg_hba` error.
+
 ## [2.34.1] - 2026-07-01
 
 ### Fixed

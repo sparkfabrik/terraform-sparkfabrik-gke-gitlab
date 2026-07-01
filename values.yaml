@@ -261,17 +261,27 @@ gitlab:
     # only in the exporter's `configure` init container, not its main container,
     # so libpq cannot present it and falls back to a non-SSL connection that
     # pg_hba rejects. The postgresql-ssl-secrets volume already exists at pod
-    # level; mounting it into the main container is the fix (verified with psql:
-    # with the certs present, libpq negotiates SSL and connects). PGSSLMODE
-    # forces + verifies SSL like the Rails apps; PGSSLCERT/PGSSLKEY/PGSSLROOTCERT
-    # already come from global.extraEnv. Related upstream gap:
-    # https://gitlab.com/gitlab-org/charts/gitlab/-/issues/1817
+    # level; mounting it into the main container is the fix (verified live: with
+    # the certs present the exporter negotiates SSL and connects, no pg_hba error).
+    #
+    # The mount MUST NOT be nested under /etc/gitlab. The chart mounts the
+    # `gitlab-exporter-secrets` emptyDir at /etc/gitlab with readOnly: true, so a
+    # nested mount at /etc/gitlab/postgres/ssl forces kubelet to create the
+    # mountpoint inside a read-only mount, which fails with "read-only file
+    # system" and crash-loops the container. Mount at the non-nested /etc/postgresql/ssl
+    # instead (rootfs is writable, the container has no readOnlyRootFilesystem) and
+    # point the exporter's PGSSL* at that path, overriding the global.extraEnv
+    # defaults which target /etc/gitlab/postgres/ssl for the Rails apps.
+    # Related upstream gap: https://gitlab.com/gitlab-org/charts/gitlab/-/issues/1817
     extraVolumeMounts: |
       - name: postgresql-ssl-secrets
-        mountPath: /etc/gitlab/postgres/ssl
+        mountPath: /etc/postgresql/ssl
         readOnly: true
     extraEnv:
       PGSSLMODE: verify-ca
+      PGSSLCERT: /etc/postgresql/ssl/client-certificate.pem
+      PGSSLKEY: /etc/postgresql/ssl/client-key.pem
+      PGSSLROOTCERT: /etc/postgresql/ssl/server-ca.pem
   ## https://docs.gitlab.com/charts/charts/gitlab/toolbox
   toolbox:
 %{ if length(BACKUP_JOB_VOLUME_FSGROUP_POLICY) > 0 ~}
