@@ -7,6 +7,12 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.34.2] - 2026-07-01
+
+### Fixed
+
+- Fix - refs https://gitlab.sparkfabrik.com/sparkfabrik-innovation-team/board/-/work_items/4574: make the gitlab-exporter database probes actually connect over mTLS, fixing two defects in the 2.34.1 attempt. First, mounting the client certificate at `/etc/gitlab/postgres/ssl` nested it inside the chart's read-only `/etc/gitlab` mount (the `gitlab-exporter-secrets` emptyDir), so kubelet could not create the mountpoint and the container crash-looped with "read-only file system"; the certificate is now mounted at the non-nested `/etc/postgresql/ssl`. Second, the chart's shared `postgresql-ssl-secrets` volume renders the private key as mode 0660 (group write), which libpq rejects ("private key file has group or world access"), so the exporter now uses its own volume built from the mTLS secret with `defaultMode: 0440` (group read only), which libpq accepts and the uid/gid 1000 process can read. The exporter's `PGSSLCERT`, `PGSSLKEY`, and `PGSSLROOTCERT` point at the new path, overriding the `global.extraEnv` defaults that target `/etc/gitlab/postgres/ssl` for the Rails apps. Verified live: with these changes the exporter starts and the database probers connect to Cloud SQL over mTLS with no `pg_hba` or private-key permission error.
+
 ## [2.34.1] - 2026-07-01
 
 ### Fixed
