@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.34.1] - 2026-07-01
+
 ### Fixed
 
 - Fix - refs https://gitlab.sparkfabrik.com/sparkfabrik-innovation-team/board/-/work_items/4574: enable SSL (mTLS) for the gitlab-exporter database connection. Mount the `postgresql-ssl-secrets` volume into the exporter's main container at `/etc/gitlab/postgres/ssl` and set `PGSSLMODE=verify-ca`, so its Postgres probes work against a Cloud SQL instance that requires a client certificate. Only applied when the exporter is enabled (`gitab_enable_prom_exporter`).
