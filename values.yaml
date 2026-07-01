@@ -256,6 +256,22 @@ gitlab:
     enabled: ${ENABLE_MIGRATIONS}
   gitlab-exporter:
     enabled: ${ENABLE_PROM_EXPORTER}
+    # gitlab-exporter's DB probes fail against a Cloud SQL instance that requires
+    # a client certificate. Root cause: the chart mounts the psql client cert
+    # only in the exporter's `configure` init container, not its main container,
+    # so libpq cannot present it and falls back to a non-SSL connection that
+    # pg_hba rejects. The postgresql-ssl-secrets volume already exists at pod
+    # level; mounting it into the main container is the fix (verified with psql:
+    # with the certs present, libpq negotiates SSL and connects). PGSSLMODE
+    # forces + verifies SSL like the Rails apps; PGSSLCERT/PGSSLKEY/PGSSLROOTCERT
+    # already come from global.extraEnv. Related upstream gap:
+    # https://gitlab.com/gitlab-org/charts/gitlab/-/issues/1817
+    extraVolumeMounts: |
+      - name: postgresql-ssl-secrets
+        mountPath: /etc/gitlab/postgres/ssl
+        readOnly: true
+    extraEnv:
+      PGSSLMODE: verify-ca
   ## https://docs.gitlab.com/charts/charts/gitlab/toolbox
   toolbox:
 %{ if length(BACKUP_JOB_VOLUME_FSGROUP_POLICY) > 0 ~}
