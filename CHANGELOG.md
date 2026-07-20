@@ -7,6 +7,18 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- `gke_enable_private_nodes` variable (default `true`) controlling whether cluster nodes are private (internal IP only) by default.
+- `gke_node_pool_enable_private_nodes` variable (default `null`) overriding `enable_private_nodes` for the default GitLab node pool; set to `false` for a node pool with ephemeral (public) external IPs.
+- `enable_private_nodes` key support per pool in `gke_additional_node_pools`, allowing individual node pools to be public or private.
+
+### Changed
+
+- Bump `terraform-google-modules/kubernetes-engine` GKE module from `~> 34.0.0` to `~> 37.0`.
+- Raise the `google` and `google-beta` provider floor to `>= 6.38.0` (still `< 7.0.0`), required by the GKE module bump.
+- Replace the removed Cloud SQL `require_ssl = true` argument with `ssl_mode = "ENCRYPTED_ONLY"`, required by the `google` 6.x provider; SSL enforcement is unchanged.
+
 ## [2.34.2] - 2026-07-01
 
 ### Fixed

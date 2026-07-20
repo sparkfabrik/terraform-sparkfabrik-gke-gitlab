@@ -215,6 +215,18 @@ variable "gke_node_pool_description" {
   default     = "Gitlab Cluster"
 }
 
+variable "gke_enable_private_nodes" {
+  type        = bool
+  description = "Whether nodes have internal IP addresses only (private nodes) at the cluster level. When true, the cluster defaults to private nodes; individual node pools can still opt out via `gke_node_pool_enable_private_nodes` or the `enable_private_nodes` key in `gke_additional_node_pools`. Set to false to give nodes ephemeral (public) external IPs by default."
+  default     = true
+}
+
+variable "gke_node_pool_enable_private_nodes" {
+  type        = bool
+  description = "Override `enable_private_nodes` for the default GitLab node pool. When null the pool inherits the cluster-level `gke_enable_private_nodes`. Set to false to give this pool ephemeral (public) external IPs, or true to force private nodes."
+  default     = null
+}
+
 variable "gke_node_count" {
   type        = number
   description = "Define the number of nodes of the cluster. Default 1"
@@ -459,7 +471,7 @@ variable "gke_location_policy" {
 
 variable "gke_additional_node_pools" {
   type        = list(map(any))
-  description = "Additional node pools to create in the cluster"
+  description = "Additional node pools to create in the cluster. Each pool may set `enable_private_nodes` (bool) to control whether its nodes are private (internal IP only) or public (ephemeral external IPs); when omitted the pool inherits the cluster-level `gke_enable_private_nodes`."
   default     = []
 }
 

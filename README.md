@@ -114,7 +114,7 @@ Then perform the following commands on the root folder:
 | gitlab\_smtp\_user | Setup email sender address for Gitlab smtp server to send emails. | `string` | `"user@example.com"` | no |
 | gitlab\_time\_zone | Setup timezone for gitlab containers | `string` | `"Europe/Rome"` | no |
 | gke\_add\_master\_webhook\_firewall\_rules | Create firewall rules to allow GKE master to communicate with cluster nodes for webhook functionality. Default true | `bool` | `true` | no |
-| gke\_additional\_node\_pools | Additional node pools to create in the cluster | `list(map(any))` | `[]` | no |
+| gke\_additional\_node\_pools | Additional node pools to create in the cluster. Each pool may set `enable_private_nodes` (bool) to control whether its nodes are private (internal IP only) or public (ephemeral external IPs); when omitted the pool inherits the cluster-level `gke_enable_private_nodes`. | `list(map(any))` | `[]` | no |
 | gke\_auto\_repair | Enable auto repair for the cluster. Default true | `bool` | `true` | no |
 | gke\_auto\_scaling | Enable auto scaling for the cluster. Default true | `bool` | `true` | no |
 | gke\_auto\_upgrade | Enable auto upgrade for the cluster. Default true | `bool` | `true` | no |
@@ -129,6 +129,7 @@ Then perform the following commands on the root folder:
 | gke\_enable\_image\_stream | Google Container File System (gcfs) has to be enabled for image streaming to be active. Needs image\_type to be set to COS\_CONTAINERD. | `bool` | `false` | no |
 | gke\_enable\_istio\_addon | Enable Istio addon | `bool` | `false` | no |
 | gke\_enable\_pod\_security\_policy | Enable Pod Security Policy for the cluster. Default false | `bool` | `false` | no |
+| gke\_enable\_private\_nodes | Whether nodes have internal IP addresses only (private nodes) at the cluster level. When true, the cluster defaults to private nodes; individual node pools can still opt out via `gke_node_pool_enable_private_nodes` or the `enable_private_nodes` key in `gke_additional_node_pools`. Set to false to give nodes ephemeral (public) external IPs by default. | `bool` | `true` | no |
 | gke\_gce\_pd\_csi\_driver | Enable GCE Persistent Disk CSI Driver for GKE Cluster. Default true | `bool` | `true` | no |
 | gke\_gitaly\_pv\_labels | The GITALY Persistent Volume labels (a map of key/value pairs comma separeted) to match against when choosing a volume to bind. This is used in the PersistentVolumeClaim selector section | `map(string)` | `{}` | no |
 | gke\_google\_group\_rbac\_mail | The name of the RBAC security group for use with Google security groups in Kubernetes RBAC. Group name must be in format gke-security-groups@yourdomain.com | `string` | `"null"` | no |
@@ -145,6 +146,7 @@ Then perform the following commands on the root folder:
 | gke\_monitoring\_enabled\_components | Monitoring components to enable when managed collection is on. Defaults to SYSTEM\_COMPONENTS so enabling managed Prometheus does not disable GKE system metrics. Only applied when gke\_monitoring\_enable\_managed\_prometheus is true. | `list(string)` | <pre>[<br/>  "SYSTEM\_COMPONENTS"<br/>]</pre> | no |
 | gke\_node\_count | Define the number of nodes of the cluster. Default 1 | `number` | `1` | no |
 | gke\_node\_pool\_description | Description of the node pool for the GitLab cluster | `string` | `"Gitlab Cluster"` | no |
+| gke\_node\_pool\_enable\_private\_nodes | Override `enable_private_nodes` for the default GitLab node pool. When null the pool inherits the cluster-level `gke_enable_private_nodes`. Set to false to give this pool ephemeral (public) external IPs, or true to force private nodes. | `bool` | `null` | no |
 | gke\_node\_pool\_name | Name of the node pool for the GitLab cluster | `string` | `"gitlab"` | no |
 | gke\_node\_pools\_labels | Map of maps containing node labels by node-pool name | `map(map(string))` | <pre>{<br>  "all": {},<br>  "default-node-pool": {}<br>}</pre> | no |
 | gke\_node\_pools\_taints | Map of lists containing node taints by node-pool name | `map(list(object({ key = string, value = string, effect = string })))` | <pre>{<br>  "gitlab": []<br>}</pre> | no |
