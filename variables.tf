@@ -227,6 +227,12 @@ variable "gke_node_pool_enable_private_nodes" {
   default     = null
 }
 
+variable "gke_master_ipv4_cidr_block" {
+  type        = string
+  description = "The /28 CIDR of the GKE control plane (hosted master) private network. Set this for private clusters so the master-webhook firewall rule sources from the control-plane range; when null the module falls back to the node subnet CIDR, which is only populated when cluster firewall rules are enabled. Leave null for public clusters without a private control plane."
+  default     = null
+}
+
 variable "gke_node_count" {
   type        = number
   description = "Define the number of nodes of the cluster. Default 1"

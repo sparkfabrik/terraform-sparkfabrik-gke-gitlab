@@ -365,6 +365,7 @@ module "gke" {
   add_master_webhook_firewall_rules = var.gke_add_master_webhook_firewall_rules
   enable_private_endpoint           = false
   enable_private_nodes              = var.gke_enable_private_nodes
+  master_ipv4_cidr_block            = var.gke_master_ipv4_cidr_block
   release_channel                   = "STABLE"
   maintenance_start_time            = var.gke_maintenance_start_time
   maintenance_end_time              = var.gke_maintenance_end_time
