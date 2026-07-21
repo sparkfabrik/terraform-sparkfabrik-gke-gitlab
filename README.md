@@ -140,6 +140,7 @@ Then perform the following commands on the root folder:
 | gke\_maintenance\_end\_time | End time for GKE maintenance window in RFC3339 format. | `string` | `"1970-01-01T04:30:00Z"` | no |
 | gke\_maintenance\_recurrence | Recurrence rule for the GKE maintenance window in RRULE format. | `string` | `"FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"` | no |
 | gke\_maintenance\_start\_time | Start time for GKE maintenance window in RFC3339 format. | `string` | `"1970-01-01T00:30:00Z"` | no |
+| gke\_master\_ipv4\_cidr\_block | The /28 CIDR of the GKE control plane (hosted master) private network. Set this for private clusters so the master-webhook firewall rule sources from the control-plane range; when null the module falls back to the node subnet CIDR, which is only populated when cluster firewall rules are enabled. Leave null for public clusters without a private control plane. | `string` | `null` | no |
 | gke\_max\_node\_count | Define the maximum number of nodes of the autoscaling cluster. Default 5 | `number` | `5` | no |
 | gke\_min\_node\_count | Define the minimum number of nodes of the autoscaling cluster. Default 1 | `number` | `1` | no |
 | gke\_monitoring\_enable\_managed\_prometheus | Whether Google Managed Service for Prometheus managed collection is enabled on the cluster. | `bool` | `false` | no |

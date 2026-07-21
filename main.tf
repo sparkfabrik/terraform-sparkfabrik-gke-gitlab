@@ -414,7 +414,7 @@ module "gke" {
         preemptible                = var.gke_preemptible
         autoscaling                = var.gke_auto_scaling
         location_policy            = var.gke_location_policy
-        enable_private_nodes       = var.gke_node_pool_enable_private_nodes
+        enable_private_nodes       = coalesce(var.gke_node_pool_enable_private_nodes, var.gke_enable_private_nodes)
 
         #Image Streaming
         enable_gcfs = var.gke_enable_image_stream

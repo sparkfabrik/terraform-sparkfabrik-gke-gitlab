@@ -12,6 +12,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - `gke_enable_private_nodes` variable (default `true`) controlling whether cluster nodes are private (internal IP only) by default.
 - `gke_node_pool_enable_private_nodes` variable (default `null`) overriding `enable_private_nodes` for the default GitLab node pool; set to `false` for a node pool with ephemeral (public) external IPs.
 - `enable_private_nodes` key support per pool in `gke_additional_node_pools`, allowing individual node pools to be public or private.
+- `gke_master_ipv4_cidr_block` variable (default `null`) passing the control-plane (hosted master) CIDR to the GKE module, so the master-webhook firewall rule sources from the control-plane range on private clusters.
 
 ### Changed
 
