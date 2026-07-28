@@ -18,7 +18,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 - Bump `terraform-google-modules/kubernetes-engine` GKE module from `~> 34.0.0` to `~> 37.0`.
 - Raise the `google` and `google-beta` provider floor to `>= 6.38.0` (still `< 7.0.0`), required by the GKE module bump.
-- Replace the removed Cloud SQL `require_ssl = true` argument with `ssl_mode = "ENCRYPTED_ONLY"`, required by the `google` 6.x provider; SSL enforcement is unchanged.
+- Replace the removed Cloud SQL `require_ssl = true` argument with `ssl_mode = "TRUSTED_CLIENT_CERTIFICATE_REQUIRED"`, required by the `google` 6.x provider. This is the documented equivalent of `require_ssl = true`, so the database keeps requiring encrypted connections with valid client certificates.
 
 ## [2.34.2] - 2026-07-01
 

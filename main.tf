@@ -195,7 +195,7 @@ resource "google_sql_database_instance" "gitlab_db" {
     ip_configuration {
       ipv4_enabled    = "false"
       private_network = google_compute_network.gitlab.self_link
-      ssl_mode        = "ENCRYPTED_ONLY"
+      ssl_mode        = "TRUSTED_CLIENT_CERTIFICATE_REQUIRED"
     }
 
     dynamic "database_flags" {
