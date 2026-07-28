@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.35.0] - 2026-07-28
+
 ### Added
 
 - `gke_enable_private_nodes` variable (default `true`) controlling whether cluster nodes are private (internal IP only) by default.
