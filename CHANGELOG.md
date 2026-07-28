@@ -7,6 +7,19 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- `gke_enable_private_nodes` variable (default `true`) controlling whether cluster nodes are private (internal IP only) by default.
+- `gke_node_pool_enable_private_nodes` variable (default `null`) overriding `enable_private_nodes` for the default GitLab node pool; set to `false` for a node pool with ephemeral (public) external IPs.
+- `enable_private_nodes` key support per pool in `gke_additional_node_pools`, allowing individual node pools to be public or private.
+- `gke_master_ipv4_cidr_block` variable (default `null`) passing the control-plane (hosted master) CIDR to the GKE module, so the master-webhook firewall rule sources from the control-plane range on private clusters.
+
+### Changed
+
+- Bump `terraform-google-modules/kubernetes-engine` GKE module from `~> 34.0.0` to `~> 37.0`.
+- Raise the `google` and `google-beta` provider floor to `>= 6.38.0` (still `< 7.0.0`), required by the GKE module bump.
+- Replace the removed Cloud SQL `require_ssl = true` argument with `ssl_mode = "TRUSTED_CLIENT_CERTIFICATE_REQUIRED"`, required by the `google` 6.x provider. This is the documented equivalent of `require_ssl = true`, so the database keeps requiring encrypted connections with valid client certificates.
+
 ## [2.34.2] - 2026-07-01
 
 ### Fixed

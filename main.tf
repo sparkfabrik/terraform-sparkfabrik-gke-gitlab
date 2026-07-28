@@ -195,7 +195,7 @@ resource "google_sql_database_instance" "gitlab_db" {
     ip_configuration {
       ipv4_enabled    = "false"
       private_network = google_compute_network.gitlab.self_link
-      require_ssl     = "true"
+      ssl_mode        = "TRUSTED_CLIENT_CERTIFICATE_REQUIRED"
     }
 
     dynamic "database_flags" {
@@ -348,7 +348,7 @@ resource "google_storage_bucket_iam_binding" "gitlab_bucket_iam_binding_admin" {
 # GKE Cluster
 module "gke" {
   source  = "terraform-google-modules/kubernetes-engine/google//modules/beta-private-cluster"
-  version = "~> 34.0.0"
+  version = "~> 37.0"
 
   # Create an implicit dependency on service activation
   project_id = module.project_services.project_id
@@ -364,7 +364,8 @@ module "gke" {
   ip_range_services                 = local.subnet_name_service_cidr
   add_master_webhook_firewall_rules = var.gke_add_master_webhook_firewall_rules
   enable_private_endpoint           = false
-  enable_private_nodes              = true
+  enable_private_nodes              = var.gke_enable_private_nodes
+  master_ipv4_cidr_block            = var.gke_master_ipv4_cidr_block
   release_channel                   = "STABLE"
   maintenance_start_time            = var.gke_maintenance_start_time
   maintenance_end_time              = var.gke_maintenance_end_time
@@ -413,6 +414,7 @@ module "gke" {
         preemptible                = var.gke_preemptible
         autoscaling                = var.gke_auto_scaling
         location_policy            = var.gke_location_policy
+        enable_private_nodes       = coalesce(var.gke_node_pool_enable_private_nodes, var.gke_enable_private_nodes)
 
         #Image Streaming
         enable_gcfs = var.gke_enable_image_stream
