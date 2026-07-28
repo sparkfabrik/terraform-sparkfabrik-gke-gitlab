@@ -7,6 +7,12 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.35.1] - 2026-07-28
+
+### Fixed
+
+- Stop the `secret_manager` submodule data source reads from being deferred to apply time. The five `gitlab_*_pass` module calls no longer carry a module level `depends_on` on `kubernetes_namespace.gitlab_namespace`, and instead take the namespace as a resource attribute so only `kubernetes_secret.k8s_secret` inherits the dependency. Previously any pending change inside `module.gke` made the four `google_secret_manager_secret_version` reads unknown at plan time, which in turn planned the `kubernetes_secret` payloads and `google_sql_user.gitlab.password` as changing on every cluster or node pool change.
+
 ## [2.35.0] - 2026-07-28
 
 ### Added

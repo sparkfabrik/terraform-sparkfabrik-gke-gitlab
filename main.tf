@@ -483,11 +483,9 @@ module "gitlab_db_pass" {
   project         = var.project_id
   region          = var.region
   secret_id       = var.gcp_existing_db_secret_name
-  k8s_namespace   = var.gitlab_namespace
+  k8s_namespace   = kubernetes_namespace.gitlab_namespace.metadata[0].name
   k8s_secret_name = "gitlab-postgres-secret"
   k8s_secret_key  = "password"
-
-  depends_on = [kubernetes_namespace.gitlab_namespace]
 }
 
 # Secret for External Object Storage (LFS, Artifacts, Uploads, etc..)
@@ -563,12 +561,11 @@ module "gitlab_smtp_pass" {
   project         = var.project_id
   region          = var.region
   secret_id       = var.gcp_existing_smtp_secret_name
-  k8s_namespace   = var.gitlab_namespace
+  k8s_namespace   = kubernetes_namespace.gitlab_namespace.metadata[0].name
   k8s_secret_name = "gitlab-smtp-secret"
   k8s_secret_key  = "password"
 
-  count      = var.gitlab_enable_smtp ? 1 : 0
-  depends_on = [kubernetes_namespace.gitlab_namespace]
+  count = var.gitlab_enable_smtp ? 1 : 0
 }
 
 #Secret for Omniauth Pass
@@ -577,12 +574,11 @@ module "gitlab_omniauth_pass" {
   project         = var.project_id
   region          = var.region
   secret_id       = var.gcp_existing_omniauth_secret_name
-  k8s_namespace   = var.gitlab_namespace
+  k8s_namespace   = kubernetes_namespace.gitlab_namespace.metadata[0].name
   k8s_secret_name = "gitlab-omniauth-secret"
   k8s_secret_key  = "provider"
 
-  count      = var.gitlab_enable_omniauth ? 1 : 0
-  depends_on = [kubernetes_namespace.gitlab_namespace]
+  count = var.gitlab_enable_omniauth ? 1 : 0
 }
 
 #Secret for Incoming Mail Pass
@@ -591,12 +587,11 @@ module "gitlab_incomingmail_pass" {
   project         = var.project_id
   region          = var.region
   secret_id       = var.gcp_existing_incomingmail_secret_name
-  k8s_namespace   = var.gitlab_namespace
+  k8s_namespace   = kubernetes_namespace.gitlab_namespace.metadata[0].name
   k8s_secret_name = local.gitlab_incomingmail_k8ssecret
   k8s_secret_key  = "password"
 
-  count      = var.gitlab_enable_incoming_mail ? 1 : 0
-  depends_on = [kubernetes_namespace.gitlab_namespace]
+  count = var.gitlab_enable_incoming_mail ? 1 : 0
 }
 
 #Secret for Service Desk Mail Pass
@@ -605,12 +600,11 @@ module "gitlab_servicedesk_pass" {
   project         = var.project_id
   region          = var.region
   secret_id       = var.gcp_existing_servicedesk_secret_name
-  k8s_namespace   = var.gitlab_namespace
+  k8s_namespace   = kubernetes_namespace.gitlab_namespace.metadata[0].name
   k8s_secret_name = local.gitlab_servicedesk_k8ssecret
   k8s_secret_key  = "password"
 
-  count      = var.gitlab_enable_service_desk ? 1 : 0
-  depends_on = [kubernetes_namespace.gitlab_namespace]
+  count = var.gitlab_enable_service_desk ? 1 : 0
 }
 
 data "google_compute_address" "gitlab" {
