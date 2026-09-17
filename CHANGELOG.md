@@ -7,6 +7,24 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [2.36.0] - 2026-09-17
+
+### Added
+
+- `redis_version` variable (default `REDIS_7_0`) setting the Memorystore Redis version. The instance previously kept the version Memorystore assigned at creation, and GitLab requires Redis 7.0 or later. Deployments that do not set the variable are upgraded in place on the next apply, which fails the instance over.
+- `gitlab_enable_gateway_api`, `gitlab_gateway_api_install_envoy` and `gitlab_gateway_api_configure_certmanager` variables (all default `false`) controlling `global.gatewayApi`. Helm chart 10.0 enables the Gateway API with Envoy Gateway and disables the NGINX Ingress by default, so the defaults keep an upgrade to chart 10 serving traffic through the NGINX Ingress.
+
+### Changed
+
+- `postgresql_version` default from `POSTGRES_12` to `POSTGRES_16`. `POSTGRES_12` has not matched a supported GitLab since GitLab 15, so a deployment on defaults built a database GitLab refuses to start against. Deployments that do not set the variable and still run PostgreSQL 12 are upgraded in place on the next apply, which cannot be undone.
+- `terraform-google-modules/cloud-nat/google` to `~> 5.4.0`.
+- tflint to v0.64.0 and the tflint google ruleset to 0.39.0.
+
+### Fixed
+
+- Declare a version constraint for the `time` provider in `required_providers`. The module uses `time_sleep` without declaring the provider.
+- Set `certmanager.config.enableGatewayAPI` from `gitlab_enable_gateway_api`. Helm chart 10.0 and later default it to `true`, which makes cert-manager require the Gateway API CRDs at startup and crash when they are absent.
+
 ## [2.35.1] - 2026-07-28
 
 ### Fixed
