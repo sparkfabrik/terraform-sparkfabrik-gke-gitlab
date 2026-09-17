@@ -139,7 +139,7 @@ resource "random_id" "cloudnat_suffix" {
 
 module "cloud_nat" {
   source        = "terraform-google-modules/cloud-nat/google"
-  version       = "~> 5.3.0"
+  version       = "~> 5.4.0"
   project_id    = var.project_id
   region        = var.region
   router        = format("%s-router", var.project_id)
