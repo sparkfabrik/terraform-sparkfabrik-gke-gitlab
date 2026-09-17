@@ -181,6 +181,14 @@ certmanager-issuer:
 ## See dependencies in Chart.yaml for current version
 installCertmanager: ${ENABLE_CERT_MANAGER}
 
+## Chart 10.0 and later default certmanager.config.enableGatewayAPI to true, which
+## makes cert-manager require the Gateway API CRDs at startup and crash when they
+## are absent. Track the Gateway API setting so cert-manager only expects those
+## CRDs when Envoy Gateway installs them.
+certmanager:
+  config:
+    enableGatewayAPI: ${ENABLE_GATEWAY_API}
+
 ## https://docs.gitlab.com/charts/charts/nginx/
 ## https://docs.gitlab.com/charts/architecture/decisions#nginx-ingress
 ## Installation & configuration of charts/ingress-nginx:
