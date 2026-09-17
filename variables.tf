@@ -597,6 +597,24 @@ variable "gitlab_install_ingress_nginx" {
   default     = true
 }
 
+variable "gitlab_enable_gateway_api" {
+  type        = bool
+  description = "Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false."
+  default     = false
+}
+
+variable "gitlab_gateway_api_install_envoy" {
+  type        = bool
+  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  default     = false
+}
+
+variable "gitlab_gateway_api_configure_certmanager" {
+  type        = bool
+  description = "Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  default     = false
+}
+
 variable "gitlab_install_kas" {
   type        = bool
   description = "Choose whether to install the Gitlab agent server in the cluster. Default to false. If enabled with gitlab_kas_hostname variable empty, kas address will be defaulted to kas.<domain_variable_value> (i.e. for domain set to example.com, kas will be enabled to kas.example.com)"

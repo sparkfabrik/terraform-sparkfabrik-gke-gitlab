@@ -68,6 +68,7 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_backup\_pv | Enable additional storage for TAR backup creation of any appreciable size | `bool` | `false` | no |
 | gitlab\_enable\_certmanager | Choose whether to Install certmanager through Gitlab Helm Chart. Default to true. | `bool` | `true` | no |
 | gitlab\_enable\_cron\_backup | Choose whether to enable Gitlab Scheduled Backups. Default to true. | `bool` | `true` | no |
+| gitlab\_enable\_gateway\_api | Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_incoming\_mail | Enable Gitlab Incoming Mail Service | `bool` | `false` | no |
 | gitlab\_enable\_omniauth | Choose whether to enable Gitlab Omniauth integration. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_registry | Choose whether to enable Gitlab Container registry. Default to false. | `bool` | `false` | no |
@@ -75,6 +76,8 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_service\_desk | Enable Gitlab Service Desk | `bool` | `false` | no |
 | gitlab\_enable\_service\_ping | Enable Gitlab Service Ping | `bool` | `true` | no |
 | gitlab\_enable\_smtp | Setup Gitlab email address to send email. | `bool` | `false` | no |
+| gitlab\_gateway\_api\_configure\_certmanager | Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
+| gitlab\_gateway\_api\_install\_envoy | Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
 | gitlab\_gitaly\_disk\_size | Setup persistent disk size for gitaly data in GB. Default 100 GB | `number` | `100` | no |
 | gitlab\_gitaly\_max\_unavailable | For PodDisruptionBudget, how many pods can be unavailable at one time for Gitaly StatefulSet | `number` | `0` | no |
 | gitlab\_gitaly\_request\_cpu | CPU request for gitaly POD. Measurement unit needs to be specified. Default 100m. | `string` | `"100m"` | no |
