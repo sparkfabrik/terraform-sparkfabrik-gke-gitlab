@@ -248,6 +248,7 @@ resource "google_redis_instance" "gitlab" {
   display_name       = "GitLab Redis"
   name               = "gitlab"
   tier               = var.redis_tier
+  redis_version      = var.redis_version
   memory_size_gb     = var.redis_size
   region             = var.region
   authorized_network = google_compute_network.gitlab.self_link

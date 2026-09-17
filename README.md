@@ -176,6 +176,7 @@ Then perform the following commands on the root folder:
 | redis\_maxmemory\_gb | Set a Max memory usage limit for Redis specified in GiB. | `number` | `0.8` | no |
 | redis\_size | Redis memory size in GiB. | `number` | `1` | no |
 | redis\_tier | The service tier of the instance. Must be one of these values BASIC and STANDARD\_HA | `string` | `"STANDARD_HA"` | no |
+| redis\_version | The version of Redis software. GitLab 19.0 and later require REDIS\_7\_0 or higher. Raising the version upgrades the instance in place, lowering it replaces the instance. | `string` | `"REDIS_7_0"` | no |
 | region | GCP region to deploy resources to | `string` | `"europe-west1"` | no |
 
 ## Outputs
