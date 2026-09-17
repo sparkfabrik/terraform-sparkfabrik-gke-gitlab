@@ -39,8 +39,8 @@ variable "gitlab_address_name" {
 
 variable "postgresql_version" {
   type        = string
-  description = "(Required) The PostgreSQL version to use. Supported values for Gitlab POSTGRES_12, POSTGRES_13. Default: POSTGRES_12"
-  default     = "POSTGRES_12"
+  description = "The PostgreSQL version to use. It must match the GitLab version installed by helm_chart_version: GitLab 18.x requires PostgreSQL 16.5 or later, GitLab 19.x requires PostgreSQL 17. Raising the version upgrades the Cloud SQL instance in place and cannot be undone."
+  default     = "POSTGRES_16"
 }
 
 variable "postgresql_tier" {

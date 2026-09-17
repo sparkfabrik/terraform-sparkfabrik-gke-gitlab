@@ -171,7 +171,7 @@ Then perform the following commands on the root folder:
 | postgresql\_disk\_type | The type of postgresql data disk: PD\_SSD or PD\_HDD. | `string` | `"PD_SSD"` | no |
 | postgresql\_enable\_backup | Setup if postgres backup configuration is enabled.Default true | `bool` | `true` | no |
 | postgresql\_tier | (Required) The machine type to use.Postgres supports only shared-core machine types, and custom machine types such as db-custom-2-13312 | `string` | `"db-custom-2-8192"` | no |
-| postgresql\_version | (Required) The PostgreSQL version to use. Supported values for Gitlab POSTGRES\_12, POSTGRES\_13. Default: POSTGRES\_12 | `string` | `"POSTGRES_12"` | no |
+| postgresql\_version | The PostgreSQL version to use. It must match the GitLab version installed by helm\_chart\_version: GitLab 18.x requires PostgreSQL 16.5 or later, GitLab 19.x requires PostgreSQL 17. Raising the version upgrades the Cloud SQL instance in place and cannot be undone. | `string` | `"POSTGRES_16"` | no |
 | project\_id | GCP Project to deploy resources | `string` | n/a | yes |
 | redis\_maxmemory\_gb | Set a Max memory usage limit for Redis specified in GiB. | `number` | `0.8` | no |
 | redis\_size | Redis memory size in GiB. | `number` | `1` | no |
