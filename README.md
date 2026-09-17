@@ -68,6 +68,7 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_backup\_pv | Enable additional storage for TAR backup creation of any appreciable size | `bool` | `false` | no |
 | gitlab\_enable\_certmanager | Choose whether to Install certmanager through Gitlab Helm Chart. Default to true. | `bool` | `true` | no |
 | gitlab\_enable\_cron\_backup | Choose whether to enable Gitlab Scheduled Backups. Default to true. | `bool` | `true` | no |
+| gitlab\_enable\_gateway\_api | Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_incoming\_mail | Enable Gitlab Incoming Mail Service | `bool` | `false` | no |
 | gitlab\_enable\_omniauth | Choose whether to enable Gitlab Omniauth integration. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_registry | Choose whether to enable Gitlab Container registry. Default to false. | `bool` | `false` | no |
@@ -75,6 +76,8 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_service\_desk | Enable Gitlab Service Desk | `bool` | `false` | no |
 | gitlab\_enable\_service\_ping | Enable Gitlab Service Ping | `bool` | `true` | no |
 | gitlab\_enable\_smtp | Setup Gitlab email address to send email. | `bool` | `false` | no |
+| gitlab\_gateway\_api\_configure\_certmanager | Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
+| gitlab\_gateway\_api\_install\_envoy | Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
 | gitlab\_gitaly\_disk\_size | Setup persistent disk size for gitaly data in GB. Default 100 GB | `number` | `100` | no |
 | gitlab\_gitaly\_max\_unavailable | For PodDisruptionBudget, how many pods can be unavailable at one time for Gitaly StatefulSet | `number` | `0` | no |
 | gitlab\_gitaly\_request\_cpu | CPU request for gitaly POD. Measurement unit needs to be specified. Default 100m. | `string` | `"100m"` | no |
@@ -171,11 +174,12 @@ Then perform the following commands on the root folder:
 | postgresql\_disk\_type | The type of postgresql data disk: PD\_SSD or PD\_HDD. | `string` | `"PD_SSD"` | no |
 | postgresql\_enable\_backup | Setup if postgres backup configuration is enabled.Default true | `bool` | `true` | no |
 | postgresql\_tier | (Required) The machine type to use.Postgres supports only shared-core machine types, and custom machine types such as db-custom-2-13312 | `string` | `"db-custom-2-8192"` | no |
-| postgresql\_version | (Required) The PostgreSQL version to use. Supported values for Gitlab POSTGRES\_12, POSTGRES\_13. Default: POSTGRES\_12 | `string` | `"POSTGRES_12"` | no |
+| postgresql\_version | The PostgreSQL version to use. It must match the GitLab version installed by helm\_chart\_version: GitLab 18.x requires PostgreSQL 16.5 or later, GitLab 19.x requires PostgreSQL 17. Raising the version upgrades the Cloud SQL instance in place and cannot be undone. | `string` | `"POSTGRES_16"` | no |
 | project\_id | GCP Project to deploy resources | `string` | n/a | yes |
 | redis\_maxmemory\_gb | Set a Max memory usage limit for Redis specified in GiB. | `number` | `0.8` | no |
 | redis\_size | Redis memory size in GiB. | `number` | `1` | no |
 | redis\_tier | The service tier of the instance. Must be one of these values BASIC and STANDARD\_HA | `string` | `"STANDARD_HA"` | no |
+| redis\_version | The version of Redis software. GitLab 19.0 and later require REDIS\_7\_0 or higher. Raising the version upgrades the instance in place, lowering it replaces the instance. | `string` | `"REDIS_7_0"` | no |
 | region | GCP region to deploy resources to | `string` | `"europe-west1"` | no |
 
 ## Outputs

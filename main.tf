@@ -1,18 +1,16 @@
-/**
- * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+# Copyright 2018 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 provider "google" {
   project = var.project_id
@@ -139,7 +137,7 @@ resource "random_id" "cloudnat_suffix" {
 
 module "cloud_nat" {
   source        = "terraform-google-modules/cloud-nat/google"
-  version       = "~> 5.3.0"
+  version       = "~> 5.4.0"
   project_id    = var.project_id
   region        = var.region
   router        = format("%s-router", var.project_id)
@@ -250,6 +248,7 @@ resource "google_redis_instance" "gitlab" {
   display_name       = "GitLab Redis"
   name               = "gitlab"
   tier               = var.redis_tier
+  redis_version      = var.redis_version
   memory_size_gb     = var.redis_size
   region             = var.region
   authorized_network = google_compute_network.gitlab.self_link
@@ -633,58 +632,61 @@ locals {
   gitlab_release_helm_values = templatefile(
     "${path.module}/values.yaml",
     {
-      DOMAIN                           = local.domain
-      INGRESS_IP                       = local.gitlab_address
-      DB_PRIVATE_IP                    = google_sql_database_instance.gitlab_db.private_ip_address
-      REDIS_PRIVATE_IP                 = google_redis_instance.gitlab.host
-      PROJECT_ID                       = var.project_id
-      ENABLE_CERT_MANAGER              = var.gitlab_enable_certmanager
-      CERT_MANAGER_EMAIL               = var.certmanager_email
-      INSTALL_RUNNER                   = var.gitlab_install_runner
-      INSTALL_INGRESS_NGINX            = var.gitlab_install_ingress_nginx
-      INSTALL_PROMETHEUS               = var.gitlab_install_prometheus
-      INSTALL_GRAFANA                  = var.gitlab_install_grafana
-      INSTALL_KAS                      = var.gitlab_install_kas
-      ENABLE_REGISTRY                  = var.gitlab_enable_registry
-      ENABLE_CRON_BACKUP               = var.gitlab_enable_cron_backup
-      SCHEDULE_CRON_BACKUP             = var.gitlab_schedule_cron_backup
-      GITALY_PV_SIZE                   = var.gitlab_gitaly_disk_size
-      PV_STORAGE_CLASS                 = var.gke_storage_class
-      ENABLE_SMTP                      = var.gitlab_enable_smtp
-      SMTP_USER                        = local.gitlab_smtp_user
-      BACKUP_EXTRA                     = var.gitlab_backup_extra_args
-      TIMEZONE                         = var.gitlab_time_zone
-      ENABLE_OMNIAUTH                  = var.gitlab_enable_omniauth
-      ENABLE_BACKUP_PV                 = var.gitlab_enable_backup_pv
-      BACKUP_PV_SIZE                   = var.gitlab_backup_pv_size
-      ENABLE_RESTORE_PV                = var.gitlab_enable_restore_pv
-      RESTORE_PV_SIZE                  = var.gitlab_restore_pv_size
-      BACKUP_PV_SC                     = var.gke_sc_gitlab_backup_disk
-      RESTORE_PV_SC                    = var.gke_sc_gitlab_restore_disk
-      PV_MATCH_LABEL                   = var.gke_gitaly_pv_labels
-      ENABLE_MIGRATIONS                = var.gitab_enable_migrations
-      ENABLE_PROM_EXPORTER             = var.gitab_enable_prom_exporter
-      GITALY_MAX_UNAVAILABLE           = var.gitlab_gitaly_max_unavailable
-      GITALY_REQUEST_CPU               = var.gitlab_gitaly_request_cpu
-      GITALY_REQUEST_MEMORY            = var.gitlab_gitaly_request_mem
-      ENABLE_SERVICE_PING              = var.gitlab_enable_service_ping
-      ENABLE_INCOMING_MAIL             = var.gitlab_enable_incoming_mail
-      INC_MAIL_ADDR                    = var.gitlab_incoming_mail_address
-      INC_MAIL_IMAP_HOST               = var.gitlab_incoming_imap_host
-      INC_MAIL_IMAP_PORT               = var.gitlab_incoming_imap_port
-      INC_MAIL_USER                    = var.gitlab_incoming_imap_user
-      INC_MAIL_K8S_SECRET              = local.gitlab_incomingmail_k8ssecret
-      ENABLE_SERVICE_DESK              = var.gitlab_enable_service_desk
-      SERVICE_DESK_MAIL_ADDR           = var.gitlab_service_desk_mail_address
-      SERVICE_DESK_IMAP_HOST           = var.gitlab_service_desk_imap_host
-      SERVICE_DESK_IMAP_PORT           = var.gitlab_service_desk_imap_port
-      SERVICE_DESK_MAIL_USER           = var.gitlab_service_desk_imap_user
-      SERVICE_DESK_K8S_SECRET          = local.gitlab_servicedesk_k8ssecret
-      KAS_DOMAIN                       = local.kas_domain
-      BACKUP_JOB_NODESELECTOR          = var.gitlab_backup_job_nodeselector
-      BACKUP_JOB_TOLERATIONS           = var.gitlab_backup_job_tolerations
-      LOG_LEVEL                        = var.gitlab_log_level
-      BACKUP_JOB_VOLUME_FSGROUP_POLICY = var.gitlab_backup_job_volume_fsgroup_policy
+      DOMAIN                            = local.domain
+      INGRESS_IP                        = local.gitlab_address
+      DB_PRIVATE_IP                     = google_sql_database_instance.gitlab_db.private_ip_address
+      REDIS_PRIVATE_IP                  = google_redis_instance.gitlab.host
+      PROJECT_ID                        = var.project_id
+      ENABLE_CERT_MANAGER               = var.gitlab_enable_certmanager
+      CERT_MANAGER_EMAIL                = var.certmanager_email
+      INSTALL_RUNNER                    = var.gitlab_install_runner
+      INSTALL_INGRESS_NGINX             = var.gitlab_install_ingress_nginx
+      ENABLE_GATEWAY_API                = var.gitlab_enable_gateway_api
+      GATEWAY_API_INSTALL_ENVOY         = var.gitlab_gateway_api_install_envoy
+      GATEWAY_API_CONFIGURE_CERTMANAGER = var.gitlab_gateway_api_configure_certmanager
+      INSTALL_PROMETHEUS                = var.gitlab_install_prometheus
+      INSTALL_GRAFANA                   = var.gitlab_install_grafana
+      INSTALL_KAS                       = var.gitlab_install_kas
+      ENABLE_REGISTRY                   = var.gitlab_enable_registry
+      ENABLE_CRON_BACKUP                = var.gitlab_enable_cron_backup
+      SCHEDULE_CRON_BACKUP              = var.gitlab_schedule_cron_backup
+      GITALY_PV_SIZE                    = var.gitlab_gitaly_disk_size
+      PV_STORAGE_CLASS                  = var.gke_storage_class
+      ENABLE_SMTP                       = var.gitlab_enable_smtp
+      SMTP_USER                         = local.gitlab_smtp_user
+      BACKUP_EXTRA                      = var.gitlab_backup_extra_args
+      TIMEZONE                          = var.gitlab_time_zone
+      ENABLE_OMNIAUTH                   = var.gitlab_enable_omniauth
+      ENABLE_BACKUP_PV                  = var.gitlab_enable_backup_pv
+      BACKUP_PV_SIZE                    = var.gitlab_backup_pv_size
+      ENABLE_RESTORE_PV                 = var.gitlab_enable_restore_pv
+      RESTORE_PV_SIZE                   = var.gitlab_restore_pv_size
+      BACKUP_PV_SC                      = var.gke_sc_gitlab_backup_disk
+      RESTORE_PV_SC                     = var.gke_sc_gitlab_restore_disk
+      PV_MATCH_LABEL                    = var.gke_gitaly_pv_labels
+      ENABLE_MIGRATIONS                 = var.gitab_enable_migrations
+      ENABLE_PROM_EXPORTER              = var.gitab_enable_prom_exporter
+      GITALY_MAX_UNAVAILABLE            = var.gitlab_gitaly_max_unavailable
+      GITALY_REQUEST_CPU                = var.gitlab_gitaly_request_cpu
+      GITALY_REQUEST_MEMORY             = var.gitlab_gitaly_request_mem
+      ENABLE_SERVICE_PING               = var.gitlab_enable_service_ping
+      ENABLE_INCOMING_MAIL              = var.gitlab_enable_incoming_mail
+      INC_MAIL_ADDR                     = var.gitlab_incoming_mail_address
+      INC_MAIL_IMAP_HOST                = var.gitlab_incoming_imap_host
+      INC_MAIL_IMAP_PORT                = var.gitlab_incoming_imap_port
+      INC_MAIL_USER                     = var.gitlab_incoming_imap_user
+      INC_MAIL_K8S_SECRET               = local.gitlab_incomingmail_k8ssecret
+      ENABLE_SERVICE_DESK               = var.gitlab_enable_service_desk
+      SERVICE_DESK_MAIL_ADDR            = var.gitlab_service_desk_mail_address
+      SERVICE_DESK_IMAP_HOST            = var.gitlab_service_desk_imap_host
+      SERVICE_DESK_IMAP_PORT            = var.gitlab_service_desk_imap_port
+      SERVICE_DESK_MAIL_USER            = var.gitlab_service_desk_imap_user
+      SERVICE_DESK_K8S_SECRET           = local.gitlab_servicedesk_k8ssecret
+      KAS_DOMAIN                        = local.kas_domain
+      BACKUP_JOB_NODESELECTOR           = var.gitlab_backup_job_nodeselector
+      BACKUP_JOB_TOLERATIONS            = var.gitlab_backup_job_tolerations
+      LOG_LEVEL                         = var.gitlab_log_level
+      BACKUP_JOB_VOLUME_FSGROUP_POLICY  = var.gitlab_backup_job_volume_fsgroup_policy
 
       #Bucket Names
       ARTIFACTS_BCKT    = google_storage_bucket.gitlab_bucket["artifacts"].name

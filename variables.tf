@@ -1,18 +1,16 @@
-/**
- * Copyright 2018 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+# Copyright 2018 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 ######################
 #  GENERAL SECTION   #
@@ -41,8 +39,8 @@ variable "gitlab_address_name" {
 
 variable "postgresql_version" {
   type        = string
-  description = "(Required) The PostgreSQL version to use. Supported values for Gitlab POSTGRES_12, POSTGRES_13. Default: POSTGRES_12"
-  default     = "POSTGRES_12"
+  description = "The PostgreSQL version to use. It must match the GitLab version installed by helm_chart_version: GitLab 18.x requires PostgreSQL 16.5 or later, GitLab 19.x requires PostgreSQL 17. Raising the version upgrades the Cloud SQL instance in place and cannot be undone."
+  default     = "POSTGRES_16"
 }
 
 variable "postgresql_tier" {
@@ -123,6 +121,12 @@ variable "redis_size" {
   type        = number
   description = "Redis memory size in GiB."
   default     = 1
+}
+
+variable "redis_version" {
+  type        = string
+  description = "The version of Redis software. GitLab 19.0 and later require REDIS_7_0 or higher. Raising the version upgrades the instance in place, lowering it replaces the instance."
+  default     = "REDIS_7_0"
 }
 
 variable "redis_maxmemory_gb" {
@@ -591,6 +595,24 @@ variable "gitlab_install_ingress_nginx" {
   type        = bool
   description = "Choose whether to install the ingress nginx controller in the cluster. Default to true."
   default     = true
+}
+
+variable "gitlab_enable_gateway_api" {
+  type        = bool
+  description = "Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false."
+  default     = false
+}
+
+variable "gitlab_gateway_api_install_envoy" {
+  type        = bool
+  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  default     = false
+}
+
+variable "gitlab_gateway_api_configure_certmanager" {
+  type        = bool
+  description = "Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  default     = false
 }
 
 variable "gitlab_install_kas" {

@@ -10,6 +10,14 @@ global:
     kas:
       name: ${KAS_DOMAIN}
 
+  ## https://docs.gitlab.com/charts/charts/globals#gateway-api-settings
+  ## Chart 10.0 enables the Gateway API with Envoy Gateway by default and
+  ## disables the NGINX Ingress. Keep it off to stay on the NGINX Ingress.
+  gatewayApi:
+    enabled: ${ENABLE_GATEWAY_API}
+    installEnvoy: ${GATEWAY_API_INSTALL_ENVOY}
+    configureCertmanager: ${GATEWAY_API_CONFIGURE_CERTMANAGER}
+
   ## doc/charts/globals.md#configure-ingress-settings
   ingress:
     apiVersion: networking.k8s.io/v1
@@ -172,6 +180,14 @@ certmanager-issuer:
 ## This value replaces `certmanager.install` to allow certmanager schema validation to pass.
 ## See dependencies in Chart.yaml for current version
 installCertmanager: ${ENABLE_CERT_MANAGER}
+
+## Chart 10.0 and later default certmanager.config.enableGatewayAPI to true, which
+## makes cert-manager require the Gateway API CRDs at startup and crash when they
+## are absent. Track the Gateway API setting so cert-manager only expects those
+## CRDs when Envoy Gateway installs them.
+certmanager:
+  config:
+    enableGatewayAPI: ${ENABLE_GATEWAY_API}
 
 ## https://docs.gitlab.com/charts/charts/nginx/
 ## https://docs.gitlab.com/charts/architecture/decisions#nginx-ingress
