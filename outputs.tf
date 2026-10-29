@@ -95,3 +95,15 @@ output "gitlab_database_name" {
   value       = google_sql_database_instance.gitlab_db.name
   description = "The name of the Cloud SQL database instance used by GitLab."
 }
+
+output "gitlab_gateway_certificate_dns_records" {
+  value = {
+    for role, authorization in google_certificate_manager_dns_authorization.gitlab : role => {
+      host = authorization.domain
+      name = try(authorization.dns_resource_record[0].name, null)
+      type = try(authorization.dns_resource_record[0].type, null)
+      data = try(authorization.dns_resource_record[0].data, null)
+    }
+  }
+  description = "DNS records, keyed by host role (gitlab, kas, registry), that the DNS zone owner must create so the GKE Gateway certificate becomes active and keeps renewing. If a DNS authorization is ever replaced, its record changes and must be updated in the zone."
+}
