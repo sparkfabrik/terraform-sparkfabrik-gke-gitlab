@@ -597,6 +597,12 @@ variable "gitlab_install_ingress_nginx" {
   default     = true
 }
 
+variable "gitlab_enable_ingress" {
+  type        = bool
+  description = "Choose whether the GitLab chart creates its Ingress resources (global.ingress.enabled). Set it to false when GitLab is exposed through the Gateway API and no Ingress controller runs, so cert-manager does not keep renewing certificates for unused Ingresses. Default to true."
+  default     = true
+}
+
 variable "gitlab_enable_gateway_api" {
   type        = bool
   description = "Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false."
@@ -612,6 +618,44 @@ variable "gitlab_gateway_api_install_envoy" {
 variable "gitlab_gateway_api_configure_certmanager" {
   type        = bool
   description = "Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  default     = false
+}
+
+variable "gke_gateway_api_channel" {
+  type        = string
+  description = "Gateway API channel of the GKE cluster: CHANNEL_STANDARD installs the standard Gateway API CRDs and enables the GKE Gateway controller, CHANNEL_DISABLED disables it. GKE does not support the experimental channel. Default to null, which leaves the cluster setting unchanged."
+  default     = null
+
+  validation {
+    condition     = contains(["CHANNEL_STANDARD", "CHANNEL_DISABLED"], coalesce(var.gke_gateway_api_channel, "CHANNEL_STANDARD"))
+    error_message = "gke_gateway_api_channel must be null, CHANNEL_STANDARD or CHANNEL_DISABLED."
+  }
+}
+
+variable "gitlab_proxy_only_subnet_cidr" {
+  type        = string
+  description = "CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC and a firewall rule from it to the GitLab pods. Default to null."
+  default     = null
+}
+
+variable "gitlab_gateway_certificate_enabled" {
+  type        = bool
+  description = "Choose whether to create the regional Certificate Manager certificate used by the GKE Gateway, with one DNS authorization per GitLab host. Create the records in the gitlab_gateway_certificate_dns_records output so the certificate becomes active. It can be enabled while the NGINX Ingress still serves traffic. Default to false."
+  default     = false
+}
+
+variable "gitlab_gke_gateway" {
+  type = object({
+    security_policy     = optional(string)
+    backend_timeout_sec = optional(number, 3600)
+  })
+  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. security_policy is the name of a regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gitlab_proxy_only_subnet_cidr, gitlab_gateway_certificate_enabled, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
+  default     = null
+}
+
+variable "gitlab_shell_load_balancer" {
+  type        = bool
+  description = "Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab_install_ingress_nginx = false. Default to false."
   default     = false
 }
 
