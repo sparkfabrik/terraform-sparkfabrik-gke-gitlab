@@ -37,6 +37,13 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(module.gke.ca_certificate)
 }
 
+provider "kubectl" {
+  host                   = "https://${module.gke.endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(module.gke.ca_certificate)
+  load_config_file       = false
+}
+
 locals {
   # Postgres DB Name
   gitlab_db_name = var.postgresql_db_random_suffix ? "${var.gitlab_db_name}-${random_id.postgres_suffix[0].hex}" : var.gitlab_db_name
@@ -366,6 +373,7 @@ module "gke" {
   enable_private_nodes              = var.gke_enable_private_nodes
   master_ipv4_cidr_block            = var.gke_master_ipv4_cidr_block
   release_channel                   = "STABLE"
+  gateway_api_channel               = var.gke_gateway_api_channel
   maintenance_start_time            = var.gke_maintenance_start_time
   maintenance_end_time              = var.gke_maintenance_end_time
   maintenance_recurrence            = var.gke_maintenance_recurrence
@@ -629,92 +637,119 @@ locals {
     )
   )
 
-  gitlab_release_helm_values = templatefile(
-    "${path.module}/values.yaml",
-    {
-      DOMAIN                            = local.domain
-      INGRESS_IP                        = local.gitlab_address
-      DB_PRIVATE_IP                     = google_sql_database_instance.gitlab_db.private_ip_address
-      REDIS_PRIVATE_IP                  = google_redis_instance.gitlab.host
-      PROJECT_ID                        = var.project_id
-      ENABLE_CERT_MANAGER               = var.gitlab_enable_certmanager
-      CERT_MANAGER_EMAIL                = var.certmanager_email
-      INSTALL_RUNNER                    = var.gitlab_install_runner
-      INSTALL_INGRESS_NGINX             = var.gitlab_install_ingress_nginx
-      ENABLE_GATEWAY_API                = var.gitlab_enable_gateway_api
-      GATEWAY_API_INSTALL_ENVOY         = var.gitlab_gateway_api_install_envoy
-      GATEWAY_API_CONFIGURE_CERTMANAGER = var.gitlab_gateway_api_configure_certmanager
-      INSTALL_PROMETHEUS                = var.gitlab_install_prometheus
-      INSTALL_GRAFANA                   = var.gitlab_install_grafana
-      INSTALL_KAS                       = var.gitlab_install_kas
-      ENABLE_REGISTRY                   = var.gitlab_enable_registry
-      ENABLE_CRON_BACKUP                = var.gitlab_enable_cron_backup
-      SCHEDULE_CRON_BACKUP              = var.gitlab_schedule_cron_backup
-      GITALY_PV_SIZE                    = var.gitlab_gitaly_disk_size
-      PV_STORAGE_CLASS                  = var.gke_storage_class
-      ENABLE_SMTP                       = var.gitlab_enable_smtp
-      SMTP_USER                         = local.gitlab_smtp_user
-      BACKUP_EXTRA                      = var.gitlab_backup_extra_args
-      TIMEZONE                          = var.gitlab_time_zone
-      ENABLE_OMNIAUTH                   = var.gitlab_enable_omniauth
-      ENABLE_BACKUP_PV                  = var.gitlab_enable_backup_pv
-      BACKUP_PV_SIZE                    = var.gitlab_backup_pv_size
-      ENABLE_RESTORE_PV                 = var.gitlab_enable_restore_pv
-      RESTORE_PV_SIZE                   = var.gitlab_restore_pv_size
-      BACKUP_PV_SC                      = var.gke_sc_gitlab_backup_disk
-      RESTORE_PV_SC                     = var.gke_sc_gitlab_restore_disk
-      PV_MATCH_LABEL                    = var.gke_gitaly_pv_labels
-      ENABLE_MIGRATIONS                 = var.gitab_enable_migrations
-      ENABLE_PROM_EXPORTER              = var.gitab_enable_prom_exporter
-      GITALY_MAX_UNAVAILABLE            = var.gitlab_gitaly_max_unavailable
-      GITALY_REQUEST_CPU                = var.gitlab_gitaly_request_cpu
-      GITALY_REQUEST_MEMORY             = var.gitlab_gitaly_request_mem
-      ENABLE_SERVICE_PING               = var.gitlab_enable_service_ping
-      ENABLE_INCOMING_MAIL              = var.gitlab_enable_incoming_mail
-      INC_MAIL_ADDR                     = var.gitlab_incoming_mail_address
-      INC_MAIL_IMAP_HOST                = var.gitlab_incoming_imap_host
-      INC_MAIL_IMAP_PORT                = var.gitlab_incoming_imap_port
-      INC_MAIL_USER                     = var.gitlab_incoming_imap_user
-      INC_MAIL_K8S_SECRET               = local.gitlab_incomingmail_k8ssecret
-      ENABLE_SERVICE_DESK               = var.gitlab_enable_service_desk
-      SERVICE_DESK_MAIL_ADDR            = var.gitlab_service_desk_mail_address
-      SERVICE_DESK_IMAP_HOST            = var.gitlab_service_desk_imap_host
-      SERVICE_DESK_IMAP_PORT            = var.gitlab_service_desk_imap_port
-      SERVICE_DESK_MAIL_USER            = var.gitlab_service_desk_imap_user
-      SERVICE_DESK_K8S_SECRET           = local.gitlab_servicedesk_k8ssecret
-      KAS_DOMAIN                        = local.kas_domain
-      BACKUP_JOB_NODESELECTOR           = var.gitlab_backup_job_nodeselector
-      BACKUP_JOB_TOLERATIONS            = var.gitlab_backup_job_tolerations
-      LOG_LEVEL                         = var.gitlab_log_level
-      BACKUP_JOB_VOLUME_FSGROUP_POLICY  = var.gitlab_backup_job_volume_fsgroup_policy
+  gitlab_release_helm_values_vars = {
+    # Hosts, project and logging
+    DOMAIN     = local.domain
+    KAS_DOMAIN = local.kas_domain
+    INGRESS_IP = local.gitlab_address
+    PROJECT_ID = var.project_id
+    TIMEZONE   = var.gitlab_time_zone
+    LOG_LEVEL  = var.gitlab_log_level
 
-      #Bucket Names
-      ARTIFACTS_BCKT    = google_storage_bucket.gitlab_bucket["artifacts"].name
-      BACKUP_BCKT       = google_storage_bucket.gitlab_bucket["backups"].name
-      DEP_PROXY_BCKT    = google_storage_bucket.gitlab_bucket["dependency-proxy"].name
-      EXT_DIFF_BCKT     = google_storage_bucket.gitlab_bucket["external-diffs"].name
-      LFS_BCKT          = google_storage_bucket.gitlab_bucket["git-lfs"].name
-      PACKAGES_BCKT     = google_storage_bucket.gitlab_bucket["packages"].name
-      REGISTRY_BCKT     = google_storage_bucket.gitlab_bucket["registry"].name
-      RUNNER_CACHE_BCKT = google_storage_bucket.gitlab_bucket["runner-cache"].name
-      TERRAFORM_BCKT    = google_storage_bucket.gitlab_bucket["terraform-state"].name
-      BACKUP_TMP_BCKT   = google_storage_bucket.gitlab_bucket["tmp-backups"].name
-      UPLOADS_BCKT      = google_storage_bucket.gitlab_bucket["uploads"].name
+    # External PostgreSQL and Redis
+    DB_PRIVATE_IP    = google_sql_database_instance.gitlab_db.private_ip_address
+    REDIS_PRIVATE_IP = google_redis_instance.gitlab.host
 
-      # HPA settings for cost/performance optimization
-      HPA_MIN_REPLICAS_REGISTRY   = var.gitlab_hpa_min_replicas_registry
-      HPA_MAX_REPLICAS_REGISTRY   = var.gitlab_hpa_max_replicas_registry
-      HPA_MIN_REPLICAS_WEBSERVICE = var.gitlab_hpa_min_replicas_webservice
-      HPA_MAX_REPLICAS_WEBSERVICE = var.gitlab_hpa_max_replicas_webservice
-      HPA_MIN_REPLICAS_SIDEKIQ    = var.gitlab_hpa_min_replicas_sidekiq
-      HPA_MAX_REPLICAS_SIDEKIQ    = var.gitlab_hpa_max_replicas_sidekiq
-      HPA_MIN_REPLICAS_KAS        = var.gitlab_hpa_min_replicas_kas
-      HPA_MAX_REPLICAS_KAS        = var.gitlab_hpa_max_replicas_kas
-      HPA_MIN_REPLICAS_SHELL      = var.gitlab_hpa_min_replicas_shell
-      HPA_MAX_REPLICAS_SHELL      = var.gitlab_hpa_max_replicas_shell
-      MONITORING_ALLOWED_CIDRS    = local.monitoring_allowed_cidrs
-    }
-  )
+    # Ingress and NGINX
+    INSTALL_INGRESS_NGINX = var.gitlab_install_ingress_nginx
+    ENABLE_INGRESS        = var.gitlab_enable_ingress
+
+    # cert-manager
+    ENABLE_CERT_MANAGER = var.gitlab_enable_certmanager
+    CERT_MANAGER_EMAIL  = var.certmanager_email
+
+    # Gateway API, see gateway.tf
+    ENABLE_GATEWAY_API                = var.gitlab_enable_gateway_api
+    GATEWAY_API_INSTALL_ENVOY         = var.gitlab_gateway_api_install_envoy
+    GATEWAY_API_CONFIGURE_CERTMANAGER = var.gitlab_gateway_api_configure_certmanager
+    ENVOY_MODULE_CRDS                 = local.envoy_enabled
+    GKE_GATEWAY                       = local.gke_gateway_enabled
+    SHELL_LOAD_BALANCER               = var.gitlab_shell_load_balancer
+    WORKHORSE_TRUSTED_CIDRS           = local.workhorse_trusted_cidrs
+
+    # Optional components
+    INSTALL_KAS       = var.gitlab_install_kas
+    ENABLE_REGISTRY   = var.gitlab_enable_registry
+    INSTALL_RUNNER    = var.gitlab_install_runner
+    ENABLE_MIGRATIONS = var.gitab_enable_migrations
+    ENABLE_OMNIAUTH   = var.gitlab_enable_omniauth
+
+    # Monitoring
+    INSTALL_PROMETHEUS       = var.gitlab_install_prometheus
+    INSTALL_GRAFANA          = var.gitlab_install_grafana
+    ENABLE_PROM_EXPORTER     = var.gitab_enable_prom_exporter
+    ENABLE_SERVICE_PING      = var.gitlab_enable_service_ping
+    MONITORING_ALLOWED_CIDRS = local.monitoring_allowed_cidrs
+
+    # Outgoing email
+    ENABLE_SMTP = var.gitlab_enable_smtp
+    SMTP_USER   = local.gitlab_smtp_user
+
+    # Incoming email
+    ENABLE_INCOMING_MAIL = var.gitlab_enable_incoming_mail
+    INC_MAIL_ADDR        = var.gitlab_incoming_mail_address
+    INC_MAIL_IMAP_HOST   = var.gitlab_incoming_imap_host
+    INC_MAIL_IMAP_PORT   = var.gitlab_incoming_imap_port
+    INC_MAIL_USER        = var.gitlab_incoming_imap_user
+    INC_MAIL_K8S_SECRET  = local.gitlab_incomingmail_k8ssecret
+
+    # Service Desk
+    ENABLE_SERVICE_DESK     = var.gitlab_enable_service_desk
+    SERVICE_DESK_MAIL_ADDR  = var.gitlab_service_desk_mail_address
+    SERVICE_DESK_IMAP_HOST  = var.gitlab_service_desk_imap_host
+    SERVICE_DESK_IMAP_PORT  = var.gitlab_service_desk_imap_port
+    SERVICE_DESK_MAIL_USER  = var.gitlab_service_desk_imap_user
+    SERVICE_DESK_K8S_SECRET = local.gitlab_servicedesk_k8ssecret
+
+    # Gitaly
+    GITALY_PV_SIZE         = var.gitlab_gitaly_disk_size
+    PV_STORAGE_CLASS       = var.gke_storage_class
+    PV_MATCH_LABEL         = var.gke_gitaly_pv_labels
+    GITALY_MAX_UNAVAILABLE = var.gitlab_gitaly_max_unavailable
+    GITALY_REQUEST_CPU     = var.gitlab_gitaly_request_cpu
+    GITALY_REQUEST_MEMORY  = var.gitlab_gitaly_request_mem
+
+    # Backup and restore
+    ENABLE_CRON_BACKUP               = var.gitlab_enable_cron_backup
+    SCHEDULE_CRON_BACKUP             = var.gitlab_schedule_cron_backup
+    BACKUP_EXTRA                     = var.gitlab_backup_extra_args
+    ENABLE_BACKUP_PV                 = var.gitlab_enable_backup_pv
+    BACKUP_PV_SIZE                   = var.gitlab_backup_pv_size
+    BACKUP_PV_SC                     = var.gke_sc_gitlab_backup_disk
+    ENABLE_RESTORE_PV                = var.gitlab_enable_restore_pv
+    RESTORE_PV_SIZE                  = var.gitlab_restore_pv_size
+    RESTORE_PV_SC                    = var.gke_sc_gitlab_restore_disk
+    BACKUP_JOB_NODESELECTOR          = var.gitlab_backup_job_nodeselector
+    BACKUP_JOB_TOLERATIONS           = var.gitlab_backup_job_tolerations
+    BACKUP_JOB_VOLUME_FSGROUP_POLICY = var.gitlab_backup_job_volume_fsgroup_policy
+
+    # Bucket names
+    ARTIFACTS_BCKT    = google_storage_bucket.gitlab_bucket["artifacts"].name
+    BACKUP_BCKT       = google_storage_bucket.gitlab_bucket["backups"].name
+    BACKUP_TMP_BCKT   = google_storage_bucket.gitlab_bucket["tmp-backups"].name
+    DEP_PROXY_BCKT    = google_storage_bucket.gitlab_bucket["dependency-proxy"].name
+    EXT_DIFF_BCKT     = google_storage_bucket.gitlab_bucket["external-diffs"].name
+    LFS_BCKT          = google_storage_bucket.gitlab_bucket["git-lfs"].name
+    PACKAGES_BCKT     = google_storage_bucket.gitlab_bucket["packages"].name
+    REGISTRY_BCKT     = google_storage_bucket.gitlab_bucket["registry"].name
+    RUNNER_CACHE_BCKT = google_storage_bucket.gitlab_bucket["runner-cache"].name
+    TERRAFORM_BCKT    = google_storage_bucket.gitlab_bucket["terraform-state"].name
+    UPLOADS_BCKT      = google_storage_bucket.gitlab_bucket["uploads"].name
+
+    # HPA settings for cost/performance optimization
+    HPA_MIN_REPLICAS_WEBSERVICE = var.gitlab_hpa_min_replicas_webservice
+    HPA_MAX_REPLICAS_WEBSERVICE = var.gitlab_hpa_max_replicas_webservice
+    HPA_MIN_REPLICAS_SIDEKIQ    = var.gitlab_hpa_min_replicas_sidekiq
+    HPA_MAX_REPLICAS_SIDEKIQ    = var.gitlab_hpa_max_replicas_sidekiq
+    HPA_MIN_REPLICAS_KAS        = var.gitlab_hpa_min_replicas_kas
+    HPA_MAX_REPLICAS_KAS        = var.gitlab_hpa_max_replicas_kas
+    HPA_MIN_REPLICAS_SHELL      = var.gitlab_hpa_min_replicas_shell
+    HPA_MAX_REPLICAS_SHELL      = var.gitlab_hpa_max_replicas_shell
+    HPA_MIN_REPLICAS_REGISTRY   = var.gitlab_hpa_min_replicas_registry
+    HPA_MAX_REPLICAS_REGISTRY   = var.gitlab_hpa_max_replicas_registry
+  }
+
+  gitlab_release_helm_values = templatefile("${path.module}/values.yaml", local.gitlab_release_helm_values_vars)
 }
 
 resource "time_sleep" "sleep_for_cluster_fix_helm_6361" {
@@ -745,5 +780,8 @@ resource "helm_release" "gitlab" {
     time_sleep.sleep_for_cluster_fix_helm_6361,
     module.cloud_nat,
     module.gitlab_db_pass,
+    # The release's Envoy resources need the Envoy CRDs, and the CRDs must
+    # outlive those resources when Envoy is turned off.
+    kubectl_manifest.envoy_crds,
   ]
 }
