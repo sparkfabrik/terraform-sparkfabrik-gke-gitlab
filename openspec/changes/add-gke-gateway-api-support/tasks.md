@@ -5,7 +5,7 @@
 - [x] 1.1 Add `alekc/kubectl` to `required_providers`, raise `required_version` to `>= 1.3`, and add a `provider "kubectl"` block in `main.tf` using the same host, token and CA as `kubernetes` with `load_config_file = false`; verify `terraform init -upgrade` and `terraform validate` pass
 - [x] 1.2 Add the inputs `gke_gateway_api_channel` (validated to `null`, `CHANNEL_STANDARD`, `CHANNEL_DISABLED`), `gitlab_proxy_only_subnet_cidr`, `gitlab_gateway_certificate_enabled`, `gitlab_gke_gateway` and `gitlab_shell_load_balancer`, all defaulting to off; verify `terraform validate` passes and `CHANNEL_EXPERIMENTAL` fails validation
 - [x] 1.3 Add a `terraform_data` resource with `precondition` blocks for the NGINX conflict, the GKE Gateway prerequisites and the chart 10.3 minimum; verify each invalid combination fails `terraform plan` against the example with an error naming the inputs involved
-- [ ] 1.4 Pass `gke_gateway_api_channel` to `module.gke` as `gateway_api_channel`; verify the example plan sets `gateway_api_config` to `CHANNEL_STANDARD` when the input is set, and shows no change when it is `null`
+- [x] 1.4 Pass `gke_gateway_api_channel` to `module.gke` as `gateway_api_channel`; verify the example plan sets `gateway_api_config` to `CHANNEL_STANDARD` when the input is set, and shows no change when it is `null`
 
 ## 2. Network and certificate
 
@@ -48,7 +48,7 @@
 - [x] 7.1 Add an example under `examples/` that enables the full Gateway path, with a regional Cloud Armor policy created in the example; verify `terraform validate` and `make docker_test_lint` pass
 - [x] 7.2 Add `CHANGELOG.md` entries under `## [Unreleased]`: the new inputs and output, the `alekc/kubectl` provider and lock file update, the `required_version` change, the CRD ownership move for consumers who already enabled Envoy, and the `configureCertmanager` fix; verify the entries follow Keep a Changelog
 - [ ] 7.3 Deploy the example in the scratch project end to end following the migration plan steps 2 and 3, then destroy it and confirm no resources remain
-- [ ] 7.4 Run `terraform plan` of `gitlab-platform` against this branch with default inputs and confirm it shows no changes
+- [x] 7.4 Run `terraform plan` of `gitlab-platform` against this branch with default inputs and confirm it shows no changes
 
 ## Workflow follow-up
 
