@@ -868,6 +868,192 @@ variable "gitlab_hpa_max_replicas_webservice" {
   default     = 10
 }
 
+variable "gitlab_webservice_startup_probe_enabled" {
+  type        = bool
+  description = "Add a startup probe to the Gitlab webservice container. The liveness probe starts only after the startup probe succeeds."
+  default     = false
+}
+
+variable "gitlab_webservice_startup_probe_period_seconds" {
+  type        = number
+  description = "Seconds between two checks of the Gitlab webservice startup probe. Used only when gitlab_webservice_startup_probe_enabled is true."
+  default     = 10
+  validation {
+    condition     = try(var.gitlab_webservice_startup_probe_period_seconds >= 1 && floor(var.gitlab_webservice_startup_probe_period_seconds) == var.gitlab_webservice_startup_probe_period_seconds, false)
+    error_message = "Startup probe period must be a positive integer."
+  }
+}
+
+variable "gitlab_webservice_startup_probe_timeout_seconds" {
+  type        = number
+  description = "Seconds after which a check of the Gitlab webservice startup probe times out. Used only when gitlab_webservice_startup_probe_enabled is true."
+  default     = 5
+  validation {
+    condition     = try(var.gitlab_webservice_startup_probe_timeout_seconds >= 1 && floor(var.gitlab_webservice_startup_probe_timeout_seconds) == var.gitlab_webservice_startup_probe_timeout_seconds, false)
+    error_message = "Startup probe timeout must be a positive integer."
+  }
+}
+
+variable "gitlab_webservice_startup_probe_failure_threshold" {
+  type        = number
+  description = "Failed checks of the Gitlab webservice startup probe before the container is restarted. The container has period times threshold seconds to boot (300 with the defaults). Used only when gitlab_webservice_startup_probe_enabled is true."
+  default     = 30
+  validation {
+    condition     = try(var.gitlab_webservice_startup_probe_failure_threshold >= 1 && floor(var.gitlab_webservice_startup_probe_failure_threshold) == var.gitlab_webservice_startup_probe_failure_threshold, false)
+    error_message = "Startup probe failure threshold must be a positive integer."
+  }
+}
+
+variable "gitlab_webservice_request_cpu" {
+  type        = string
+  description = "CPU request for the Gitlab webservice container (e.g., 300m or 1). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_webservice_request_cpu == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?m?$", var.gitlab_webservice_request_cpu))
+    error_message = "CPU request must be a valid Kubernetes CPU value (e.g., 300m, 1 or 1.5)."
+  }
+}
+
+variable "gitlab_webservice_request_mem" {
+  type        = string
+  description = "Memory request for the Gitlab webservice container (e.g., 2.5G or 3Gi). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_webservice_request_mem == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|k|M|G|T)$", var.gitlab_webservice_request_mem))
+    error_message = "Memory request must be a valid Kubernetes memory value (e.g., 2500M, 2.5G or 3Gi)."
+  }
+}
+
+variable "gitlab_hpa_behavior_webservice" {
+  type        = any
+  description = "Scaling behavior of the Gitlab webservice HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_hpa_behavior_webservice == null ? true : try(length(setsubtract(keys(var.gitlab_hpa_behavior_webservice), ["scaleUp", "scaleDown"])) == 0 && length([for key, value in var.gitlab_hpa_behavior_webservice : key if value != null && !can(keys(value))]) == 0, false)
+    error_message = "HPA behavior must be an object with only the scaleUp and scaleDown keys, each one an object."
+  }
+}
+
+variable "gitlab_registry_request_cpu" {
+  type        = string
+  description = "CPU request for the Gitlab Registry container (e.g., 300m or 1). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_registry_request_cpu == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?m?$", var.gitlab_registry_request_cpu))
+    error_message = "CPU request must be a valid Kubernetes CPU value (e.g., 300m, 1 or 1.5)."
+  }
+}
+
+variable "gitlab_registry_request_mem" {
+  type        = string
+  description = "Memory request for the Gitlab Registry container (e.g., 2.5G or 3Gi). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_registry_request_mem == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|k|M|G|T)$", var.gitlab_registry_request_mem))
+    error_message = "Memory request must be a valid Kubernetes memory value (e.g., 2500M, 2.5G or 3Gi)."
+  }
+}
+
+variable "gitlab_hpa_behavior_registry" {
+  type        = any
+  description = "Scaling behavior of the Gitlab Registry HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_hpa_behavior_registry == null ? true : try(length(setsubtract(keys(var.gitlab_hpa_behavior_registry), ["scaleUp", "scaleDown"])) == 0 && length([for key, value in var.gitlab_hpa_behavior_registry : key if value != null && !can(keys(value))]) == 0, false)
+    error_message = "HPA behavior must be an object with only the scaleUp and scaleDown keys, each one an object."
+  }
+}
+
+variable "gitlab_shell_request_cpu" {
+  type        = string
+  description = "CPU request for the Gitlab Shell container (e.g., 300m or 1). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_shell_request_cpu == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?m?$", var.gitlab_shell_request_cpu))
+    error_message = "CPU request must be a valid Kubernetes CPU value (e.g., 300m, 1 or 1.5)."
+  }
+}
+
+variable "gitlab_shell_request_mem" {
+  type        = string
+  description = "Memory request for the Gitlab Shell container (e.g., 2.5G or 3Gi). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_shell_request_mem == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|k|M|G|T)$", var.gitlab_shell_request_mem))
+    error_message = "Memory request must be a valid Kubernetes memory value (e.g., 2500M, 2.5G or 3Gi)."
+  }
+}
+
+variable "gitlab_hpa_behavior_shell" {
+  type        = any
+  description = "Scaling behavior of the Gitlab Shell HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_hpa_behavior_shell == null ? true : try(length(setsubtract(keys(var.gitlab_hpa_behavior_shell), ["scaleUp", "scaleDown"])) == 0 && length([for key, value in var.gitlab_hpa_behavior_shell : key if value != null && !can(keys(value))]) == 0, false)
+    error_message = "HPA behavior must be an object with only the scaleUp and scaleDown keys, each one an object."
+  }
+}
+
+variable "gitlab_kas_request_cpu" {
+  type        = string
+  description = "CPU request for the Gitlab Kas container (e.g., 300m or 1). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_kas_request_cpu == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?m?$", var.gitlab_kas_request_cpu))
+    error_message = "CPU request must be a valid Kubernetes CPU value (e.g., 300m, 1 or 1.5)."
+  }
+}
+
+variable "gitlab_kas_request_mem" {
+  type        = string
+  description = "Memory request for the Gitlab Kas container (e.g., 2.5G or 3Gi). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_kas_request_mem == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|k|M|G|T)$", var.gitlab_kas_request_mem))
+    error_message = "Memory request must be a valid Kubernetes memory value (e.g., 2500M, 2.5G or 3Gi)."
+  }
+}
+
+variable "gitlab_hpa_behavior_kas" {
+  type        = any
+  description = "Scaling behavior of the Gitlab Kas HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_hpa_behavior_kas == null ? true : try(length(setsubtract(keys(var.gitlab_hpa_behavior_kas), ["scaleUp", "scaleDown"])) == 0 && length([for key, value in var.gitlab_hpa_behavior_kas : key if value != null && !can(keys(value))]) == 0, false)
+    error_message = "HPA behavior must be an object with only the scaleUp and scaleDown keys, each one an object."
+  }
+}
+
+variable "gitlab_sidekiq_request_cpu" {
+  type        = string
+  description = "CPU request for the Gitlab sidekiq container (e.g., 300m or 1). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_sidekiq_request_cpu == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?m?$", var.gitlab_sidekiq_request_cpu))
+    error_message = "CPU request must be a valid Kubernetes CPU value (e.g., 300m, 1 or 1.5)."
+  }
+}
+
+variable "gitlab_sidekiq_request_mem" {
+  type        = string
+  description = "Memory request for the Gitlab sidekiq container (e.g., 2.5G or 3Gi). Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_sidekiq_request_mem == null ? true : can(regex("^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|k|M|G|T)$", var.gitlab_sidekiq_request_mem))
+    error_message = "Memory request must be a valid Kubernetes memory value (e.g., 2500M, 2.5G or 3Gi)."
+  }
+}
+
+variable "gitlab_hpa_behavior_sidekiq" {
+  type        = any
+  description = "Scaling behavior of the Gitlab sidekiq HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default."
+  default     = null
+  validation {
+    condition     = var.gitlab_hpa_behavior_sidekiq == null ? true : try(length(setsubtract(keys(var.gitlab_hpa_behavior_sidekiq), ["scaleUp", "scaleDown"])) == 0 && length([for key, value in var.gitlab_hpa_behavior_sidekiq : key if value != null && !can(keys(value))]) == 0, false)
+    error_message = "HPA behavior must be an object with only the scaleUp and scaleDown keys, each one an object."
+  }
+}
+
 variable "gitlab_monitoring_restrict_to_pod_subnet" {
   type        = bool
   description = "Restricrt access to the Gitlab monitoring paths (readiness, liveness and metrics) to the pod cidr. If you specify the 'gitlab_monitoring_allowed_cidrs' list, the pod subnet will be automatically added to the list to grant access to the probes."
