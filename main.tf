@@ -629,6 +629,21 @@ locals {
     )
   )
 
+  # HPA behavior per component as YAML. Null attributes are dropped at the first
+  # two levels, so that a null never reaches the Helm values, where it could
+  # remove a chart default instead of being merged over it.
+  hpa_behavior_yaml = {
+    for name, behavior in {
+      registry   = var.gitlab_hpa_behavior_registry
+      shell      = var.gitlab_hpa_behavior_shell
+      kas        = var.gitlab_hpa_behavior_kas
+      sidekiq    = var.gitlab_hpa_behavior_sidekiq
+      webservice = var.gitlab_hpa_behavior_webservice
+      } : name => behavior == null ? "" : trimspace(yamlencode({
+        for key, value in behavior : key => { for k, v in value : k => v if v != null } if value != null
+    }))
+  }
+
   gitlab_release_helm_values = templatefile(
     "${path.module}/values.yaml",
     {
@@ -717,23 +732,23 @@ locals {
       # Requests and HPA behavior per component. An empty string keeps the chart default.
       REGISTRY_REQUEST_CPU                       = var.gitlab_registry_request_cpu == null ? "" : var.gitlab_registry_request_cpu
       REGISTRY_REQUEST_MEM                       = var.gitlab_registry_request_mem == null ? "" : var.gitlab_registry_request_mem
-      REGISTRY_HPA_BEHAVIOR                      = var.gitlab_registry_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_registry_hpa_behavior))
+      REGISTRY_HPA_BEHAVIOR                      = local.hpa_behavior_yaml["registry"]
       SHELL_REQUEST_CPU                          = var.gitlab_shell_request_cpu == null ? "" : var.gitlab_shell_request_cpu
       SHELL_REQUEST_MEM                          = var.gitlab_shell_request_mem == null ? "" : var.gitlab_shell_request_mem
-      SHELL_HPA_BEHAVIOR                         = var.gitlab_shell_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_shell_hpa_behavior))
+      SHELL_HPA_BEHAVIOR                         = local.hpa_behavior_yaml["shell"]
       KAS_REQUEST_CPU                            = var.gitlab_kas_request_cpu == null ? "" : var.gitlab_kas_request_cpu
       KAS_REQUEST_MEM                            = var.gitlab_kas_request_mem == null ? "" : var.gitlab_kas_request_mem
-      KAS_HPA_BEHAVIOR                           = var.gitlab_kas_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_kas_hpa_behavior))
+      KAS_HPA_BEHAVIOR                           = local.hpa_behavior_yaml["kas"]
       SIDEKIQ_REQUEST_CPU                        = var.gitlab_sidekiq_request_cpu == null ? "" : var.gitlab_sidekiq_request_cpu
       SIDEKIQ_REQUEST_MEM                        = var.gitlab_sidekiq_request_mem == null ? "" : var.gitlab_sidekiq_request_mem
-      SIDEKIQ_HPA_BEHAVIOR                       = var.gitlab_sidekiq_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_sidekiq_hpa_behavior))
+      SIDEKIQ_HPA_BEHAVIOR                       = local.hpa_behavior_yaml["sidekiq"]
       WEBSERVICE_STARTUP_PROBE_ENABLED           = var.gitlab_webservice_startup_probe_enabled
       WEBSERVICE_STARTUP_PROBE_PERIOD_SECONDS    = var.gitlab_webservice_startup_probe_period_seconds
       WEBSERVICE_STARTUP_PROBE_TIMEOUT_SECONDS   = var.gitlab_webservice_startup_probe_timeout_seconds
       WEBSERVICE_STARTUP_PROBE_FAILURE_THRESHOLD = var.gitlab_webservice_startup_probe_failure_threshold
       WEBSERVICE_REQUEST_CPU                     = var.gitlab_webservice_request_cpu == null ? "" : var.gitlab_webservice_request_cpu
       WEBSERVICE_REQUEST_MEM                     = var.gitlab_webservice_request_mem == null ? "" : var.gitlab_webservice_request_mem
-      WEBSERVICE_HPA_BEHAVIOR                    = var.gitlab_webservice_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_webservice_hpa_behavior))
+      WEBSERVICE_HPA_BEHAVIOR                    = local.hpa_behavior_yaml["webservice"]
     }
   )
 }

@@ -230,7 +230,7 @@ registry:
   resources:
     requests:
 %{ if REGISTRY_REQUEST_CPU != "" ~}
-      cpu: ${REGISTRY_REQUEST_CPU}
+      cpu: "${REGISTRY_REQUEST_CPU}"
 %{ endif ~}
 %{ if REGISTRY_REQUEST_MEM != "" ~}
       memory: ${REGISTRY_REQUEST_MEM}
@@ -266,7 +266,7 @@ gitlab:
     resources:
       requests:
 %{ if SHELL_REQUEST_CPU != "" ~}
-        cpu: ${SHELL_REQUEST_CPU}
+        cpu: "${SHELL_REQUEST_CPU}"
 %{ endif ~}
 %{ if SHELL_REQUEST_MEM != "" ~}
         memory: ${SHELL_REQUEST_MEM}
@@ -284,7 +284,7 @@ gitlab:
     resources:
       requests:
 %{ if KAS_REQUEST_CPU != "" ~}
-        cpu: ${KAS_REQUEST_CPU}
+        cpu: "${KAS_REQUEST_CPU}"
 %{ endif ~}
 %{ if KAS_REQUEST_MEM != "" ~}
         memory: ${KAS_REQUEST_MEM}
@@ -313,7 +313,7 @@ gitlab:
     resources:
       requests:
 %{ if WEBSERVICE_REQUEST_CPU != "" ~}
-        cpu: ${WEBSERVICE_REQUEST_CPU}
+        cpu: "${WEBSERVICE_REQUEST_CPU}"
 %{ endif ~}
 %{ if WEBSERVICE_REQUEST_MEM != "" ~}
         memory: ${WEBSERVICE_REQUEST_MEM}
@@ -340,7 +340,7 @@ gitlab:
     resources:
       requests:
 %{ if SIDEKIQ_REQUEST_CPU != "" ~}
-        cpu: ${SIDEKIQ_REQUEST_CPU}
+        cpu: "${SIDEKIQ_REQUEST_CPU}"
 %{ endif ~}
 %{ if SIDEKIQ_REQUEST_MEM != "" ~}
         memory: ${SIDEKIQ_REQUEST_MEM}
