@@ -103,10 +103,16 @@ Then perform the following commands on the root folder:
 | gitlab\_install\_prometheus | Choose whether to install a Prometheus instance using the Gitlab chart. Default to false. | `bool` | `false` | no |
 | gitlab\_install\_runner | Choose whether to install the gitlab runner in the cluster | `string` | `true` | no |
 | gitlab\_kas\_hostname | Gitlab custom hostname KAS. If set, this hostname is used with domain set in domain variable (i.e. my\_kas\_hostname.example.com) | `string` | `""` | no |
+| gitlab\_kas\_hpa\_behavior | Scaling behavior of the Gitlab Kas HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
+| gitlab\_kas\_request\_cpu | CPU request for the Gitlab Kas container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_kas\_request\_mem | Memory request for the Gitlab Kas container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_log\_level | Override the minimum log level for GitLab loggers. Valid values are either a value of 0 to 5, or the name of the log level | `string` | `""` | no |
 | gitlab\_monitoring\_allowed\_cidrs | Set the list of the allowed CIDRs for the Gitlab monitoring paths (readiness, liveness and metrics). | `list(string)` | `[]` | no |
 | gitlab\_monitoring\_restrict\_to\_pod\_subnet | Restricrt access to the Gitlab monitoring paths (readiness, liveness and metrics) to the pod cidr. If you specify the 'gitlab\_monitoring\_allowed\_cidrs' list, the pod subnet will be automatically added to the list to grant access to the probes. | `bool` | `true` | no |
 | gitlab\_namespace | Setup  the Kubernetes Namespace where to install gitlab | `string` | `"gitlab"` | no |
+| gitlab\_registry\_hpa\_behavior | Scaling behavior of the Gitlab Registry HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
+| gitlab\_registry\_request\_cpu | CPU request for the Gitlab Registry container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_registry\_request\_mem | Memory request for the Gitlab Registry container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_restore\_pv\_size | Set the size of the additional storage for Backup TAR Restoration Process | `number` | `100` | no |
 | gitlab\_schedule\_cron\_backup | Setup Cron Job for Gitlab Scheduled Backup using unix-cron string format. Default to '0 1 \* \* \*' (Everyday at 1 AM). | `string` | `"0 1 * * *"` | no |
 | gitlab\_service\_desk\_imap\_host | Imap server address for the Service Desk | `string` | `""` | no |
@@ -114,8 +120,21 @@ Then perform the following commands on the root folder:
 | gitlab\_service\_desk\_imap\_user | Imap server user for Service Desk Imap Service | `string` | `""` | no |
 | gitlab\_service\_desk\_k8s\_secret | Kubernetes secret name for storing Service Desk Mail account password | `string` | `"gitlab-servicedesk-secret"` | no |
 | gitlab\_service\_desk\_mail\_address | Email Address for Service Desk Service | `string` | `""` | no |
+| gitlab\_shell\_hpa\_behavior | Scaling behavior of the Gitlab Shell HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
+| gitlab\_shell\_request\_cpu | CPU request for the Gitlab Shell container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_shell\_request\_mem | Memory request for the Gitlab Shell container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_sidekiq\_hpa\_behavior | Scaling behavior of the Gitlab sidekiq HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
+| gitlab\_sidekiq\_request\_cpu | CPU request for the Gitlab sidekiq container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_sidekiq\_request\_mem | Memory request for the Gitlab sidekiq container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_smtp\_user | Setup email sender address for Gitlab smtp server to send emails. | `string` | `"user@example.com"` | no |
 | gitlab\_time\_zone | Setup timezone for gitlab containers | `string` | `"Europe/Rome"` | no |
+| gitlab\_webservice\_hpa\_behavior | Scaling behavior of the Gitlab webservice HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
+| gitlab\_webservice\_request\_cpu | CPU request for the Gitlab webservice container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_webservice\_request\_mem | Memory request for the Gitlab webservice container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
+| gitlab\_webservice\_startup\_probe\_enabled | Add a startup probe to the Gitlab webservice container. The liveness probe starts only after the startup probe succeeds. | `bool` | `false` | no |
+| gitlab\_webservice\_startup\_probe\_failure\_threshold | Failed checks of the Gitlab webservice startup probe before the container is restarted. The container has period times threshold seconds to boot (300 with the defaults). Used only when gitlab\_webservice\_startup\_probe\_enabled is true. | `number` | `30` | no |
+| gitlab\_webservice\_startup\_probe\_period\_seconds | Seconds between two checks of the Gitlab webservice startup probe. Used only when gitlab\_webservice\_startup\_probe\_enabled is true. | `number` | `10` | no |
+| gitlab\_webservice\_startup\_probe\_timeout\_seconds | Seconds after which a check of the Gitlab webservice startup probe times out. Used only when gitlab\_webservice\_startup\_probe\_enabled is true. | `number` | `5` | no |
 | gke\_add\_master\_webhook\_firewall\_rules | Create firewall rules to allow GKE master to communicate with cluster nodes for webhook functionality. Default true | `bool` | `true` | no |
 | gke\_additional\_node\_pools | Additional node pools to create in the cluster. Each pool may set `enable_private_nodes` (bool) to control whether its nodes are private (internal IP only) or public (ephemeral external IPs); when omitted the pool inherits the cluster-level `gke_enable_private_nodes`. | `list(map(any))` | `[]` | no |
 | gke\_auto\_repair | Enable auto repair for the cluster. Default true | `bool` | `true` | no |

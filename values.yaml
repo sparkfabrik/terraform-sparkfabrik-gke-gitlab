@@ -222,6 +222,20 @@ registry:
   hpa:
     minReplicas: ${HPA_MIN_REPLICAS_REGISTRY}
     maxReplicas: ${HPA_MAX_REPLICAS_REGISTRY}
+%{ if REGISTRY_HPA_BEHAVIOR != "" ~}
+    behavior:
+      ${indent(6, REGISTRY_HPA_BEHAVIOR)}
+%{ endif ~}
+%{ if REGISTRY_REQUEST_CPU != "" || REGISTRY_REQUEST_MEM != "" ~}
+  resources:
+    requests:
+%{ if REGISTRY_REQUEST_CPU != "" ~}
+      cpu: ${REGISTRY_REQUEST_CPU}
+%{ endif ~}
+%{ if REGISTRY_REQUEST_MEM != "" ~}
+      memory: ${REGISTRY_REQUEST_MEM}
+%{ endif ~}
+%{ endif ~}
   storage:
     secret: gitlab-registry-storage
     key: storage
@@ -248,12 +262,68 @@ gitlab:
   gitlab-shell:
     minReplicas: ${HPA_MIN_REPLICAS_SHELL}
     maxReplicas: ${HPA_MAX_REPLICAS_SHELL}
+%{ if SHELL_REQUEST_CPU != "" || SHELL_REQUEST_MEM != "" ~}
+    resources:
+      requests:
+%{ if SHELL_REQUEST_CPU != "" ~}
+        cpu: ${SHELL_REQUEST_CPU}
+%{ endif ~}
+%{ if SHELL_REQUEST_MEM != "" ~}
+        memory: ${SHELL_REQUEST_MEM}
+%{ endif ~}
+%{ endif ~}
+%{ if SHELL_HPA_BEHAVIOR != "" ~}
+    hpa:
+      behavior:
+        ${indent(8, SHELL_HPA_BEHAVIOR)}
+%{ endif ~}
   kas:
     minReplicas: ${HPA_MIN_REPLICAS_KAS}
     maxReplicas: ${HPA_MAX_REPLICAS_KAS}
+%{ if KAS_REQUEST_CPU != "" || KAS_REQUEST_MEM != "" ~}
+    resources:
+      requests:
+%{ if KAS_REQUEST_CPU != "" ~}
+        cpu: ${KAS_REQUEST_CPU}
+%{ endif ~}
+%{ if KAS_REQUEST_MEM != "" ~}
+        memory: ${KAS_REQUEST_MEM}
+%{ endif ~}
+%{ endif ~}
+%{ if KAS_HPA_BEHAVIOR != "" ~}
+    hpa:
+      behavior:
+        ${indent(8, KAS_HPA_BEHAVIOR)}
+%{ endif ~}
   webservice:
     minReplicas: ${HPA_MIN_REPLICAS_WEBSERVICE}
     maxReplicas: ${HPA_MAX_REPLICAS_WEBSERVICE}
+%{ if WEBSERVICE_STARTUP_PROBE_ENABLED ~}
+    ## The chart renders the startup probe as is, so it needs its own handler.
+    deployment:
+      startupProbe:
+        httpGet:
+          path: /-/liveness
+          port: 8080
+        periodSeconds: ${WEBSERVICE_STARTUP_PROBE_PERIOD_SECONDS}
+        timeoutSeconds: ${WEBSERVICE_STARTUP_PROBE_TIMEOUT_SECONDS}
+        failureThreshold: ${WEBSERVICE_STARTUP_PROBE_FAILURE_THRESHOLD}
+%{ endif ~}
+%{ if WEBSERVICE_REQUEST_CPU != "" || WEBSERVICE_REQUEST_MEM != "" ~}
+    resources:
+      requests:
+%{ if WEBSERVICE_REQUEST_CPU != "" ~}
+        cpu: ${WEBSERVICE_REQUEST_CPU}
+%{ endif ~}
+%{ if WEBSERVICE_REQUEST_MEM != "" ~}
+        memory: ${WEBSERVICE_REQUEST_MEM}
+%{ endif ~}
+%{ endif ~}
+%{ if WEBSERVICE_HPA_BEHAVIOR != "" ~}
+    hpa:
+      behavior:
+        ${indent(8, WEBSERVICE_HPA_BEHAVIOR)}
+%{ endif ~}
     registry:
       enabled: ${ENABLE_REGISTRY}
 %{ if length(MONITORING_ALLOWED_CIDRS) > 0 ~}
@@ -266,6 +336,21 @@ gitlab:
   sidekiq:
     minReplicas: ${HPA_MIN_REPLICAS_SIDEKIQ}
     maxReplicas: ${HPA_MAX_REPLICAS_SIDEKIQ}
+%{ if SIDEKIQ_REQUEST_CPU != "" || SIDEKIQ_REQUEST_MEM != "" ~}
+    resources:
+      requests:
+%{ if SIDEKIQ_REQUEST_CPU != "" ~}
+        cpu: ${SIDEKIQ_REQUEST_CPU}
+%{ endif ~}
+%{ if SIDEKIQ_REQUEST_MEM != "" ~}
+        memory: ${SIDEKIQ_REQUEST_MEM}
+%{ endif ~}
+%{ endif ~}
+%{ if SIDEKIQ_HPA_BEHAVIOR != "" ~}
+    hpa:
+      behavior:
+        ${indent(8, SIDEKIQ_HPA_BEHAVIOR)}
+%{ endif ~}
     registry:
       enabled: ${ENABLE_REGISTRY}
   migrations:

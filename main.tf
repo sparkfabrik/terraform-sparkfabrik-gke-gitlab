@@ -713,6 +713,27 @@ locals {
       HPA_MIN_REPLICAS_SHELL      = var.gitlab_hpa_min_replicas_shell
       HPA_MAX_REPLICAS_SHELL      = var.gitlab_hpa_max_replicas_shell
       MONITORING_ALLOWED_CIDRS    = local.monitoring_allowed_cidrs
+
+      # Requests and HPA behavior per component. An empty string keeps the chart default.
+      REGISTRY_REQUEST_CPU                       = var.gitlab_registry_request_cpu == null ? "" : var.gitlab_registry_request_cpu
+      REGISTRY_REQUEST_MEM                       = var.gitlab_registry_request_mem == null ? "" : var.gitlab_registry_request_mem
+      REGISTRY_HPA_BEHAVIOR                      = var.gitlab_registry_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_registry_hpa_behavior))
+      SHELL_REQUEST_CPU                          = var.gitlab_shell_request_cpu == null ? "" : var.gitlab_shell_request_cpu
+      SHELL_REQUEST_MEM                          = var.gitlab_shell_request_mem == null ? "" : var.gitlab_shell_request_mem
+      SHELL_HPA_BEHAVIOR                         = var.gitlab_shell_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_shell_hpa_behavior))
+      KAS_REQUEST_CPU                            = var.gitlab_kas_request_cpu == null ? "" : var.gitlab_kas_request_cpu
+      KAS_REQUEST_MEM                            = var.gitlab_kas_request_mem == null ? "" : var.gitlab_kas_request_mem
+      KAS_HPA_BEHAVIOR                           = var.gitlab_kas_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_kas_hpa_behavior))
+      SIDEKIQ_REQUEST_CPU                        = var.gitlab_sidekiq_request_cpu == null ? "" : var.gitlab_sidekiq_request_cpu
+      SIDEKIQ_REQUEST_MEM                        = var.gitlab_sidekiq_request_mem == null ? "" : var.gitlab_sidekiq_request_mem
+      SIDEKIQ_HPA_BEHAVIOR                       = var.gitlab_sidekiq_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_sidekiq_hpa_behavior))
+      WEBSERVICE_STARTUP_PROBE_ENABLED           = var.gitlab_webservice_startup_probe_enabled
+      WEBSERVICE_STARTUP_PROBE_PERIOD_SECONDS    = var.gitlab_webservice_startup_probe_period_seconds
+      WEBSERVICE_STARTUP_PROBE_TIMEOUT_SECONDS   = var.gitlab_webservice_startup_probe_timeout_seconds
+      WEBSERVICE_STARTUP_PROBE_FAILURE_THRESHOLD = var.gitlab_webservice_startup_probe_failure_threshold
+      WEBSERVICE_REQUEST_CPU                     = var.gitlab_webservice_request_cpu == null ? "" : var.gitlab_webservice_request_cpu
+      WEBSERVICE_REQUEST_MEM                     = var.gitlab_webservice_request_mem == null ? "" : var.gitlab_webservice_request_mem
+      WEBSERVICE_HPA_BEHAVIOR                    = var.gitlab_webservice_hpa_behavior == null ? "" : trimspace(yamlencode(var.gitlab_webservice_hpa_behavior))
     }
   )
 }

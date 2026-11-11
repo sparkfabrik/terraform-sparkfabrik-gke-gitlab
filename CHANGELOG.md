@@ -7,6 +7,28 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- `gitlab_webservice_startup_probe_enabled` variable (default `false`) adding a startup probe to the GitLab webservice container.
+- `gitlab_webservice_startup_probe_period_seconds` variable (default `10`) setting the period of the webservice startup probe.
+- `gitlab_webservice_startup_probe_timeout_seconds` variable (default `5`) setting the timeout of the webservice startup probe.
+- `gitlab_webservice_startup_probe_failure_threshold` variable (default `30`) setting the failure threshold of the webservice startup probe.
+- `gitlab_webservice_request_cpu` variable (default `null`) setting the CPU request of the GitLab webservice container.
+- `gitlab_webservice_request_mem` variable (default `null`) setting the memory request of the GitLab webservice container.
+- `gitlab_webservice_hpa_behavior` variable (default `null`) setting the scaling behavior of the GitLab webservice HPA.
+- `gitlab_sidekiq_request_cpu` variable (default `null`) setting the CPU request of the GitLab Sidekiq container.
+- `gitlab_sidekiq_request_mem` variable (default `null`) setting the memory request of the GitLab Sidekiq container.
+- `gitlab_sidekiq_hpa_behavior` variable (default `null`) setting the scaling behavior of the GitLab Sidekiq HPA.
+- `gitlab_kas_request_cpu` variable (default `null`) setting the CPU request of the GitLab KAS container.
+- `gitlab_kas_request_mem` variable (default `null`) setting the memory request of the GitLab KAS container.
+- `gitlab_kas_hpa_behavior` variable (default `null`) setting the scaling behavior of the GitLab KAS HPA.
+- `gitlab_shell_request_cpu` variable (default `null`) setting the CPU request of the GitLab Shell container.
+- `gitlab_shell_request_mem` variable (default `null`) setting the memory request of the GitLab Shell container.
+- `gitlab_shell_hpa_behavior` variable (default `null`) setting the scaling behavior of the GitLab Shell HPA.
+- `gitlab_registry_request_cpu` variable (default `null`) setting the CPU request of the GitLab Registry container.
+- `gitlab_registry_request_mem` variable (default `null`) setting the memory request of the GitLab Registry container.
+- `gitlab_registry_hpa_behavior` variable (default `null`) setting the scaling behavior of the GitLab Registry HPA.
+
 ## [2.36.0] - 2026-09-17
 
 ### Added
