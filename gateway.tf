@@ -169,10 +169,12 @@ data "helm_template" "envoy_crds" {
 
   values = [local.envoy_crds_render_values]
 
-  set {
-    name  = "envoy-gateway.crds.enabled"
-    value = "true"
-  }
+  set = [
+    {
+      name  = "envoy-gateway.crds.enabled"
+      value = "true"
+    },
+  ]
 }
 
 resource "kubectl_manifest" "envoy_crds" {
