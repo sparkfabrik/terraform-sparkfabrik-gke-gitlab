@@ -9,6 +9,29 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 
+- `gke_gateway_api_channel` variable (default `null`) setting the GKE Gateway API channel to `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.
+- `gitlab_proxy_only_subnet_cidr` variable (default `null`) creating the regional proxy-only subnet used by the GKE Gateway load balancer.
+- `gitlab_gateway_certificate_enabled` variable (default `false`) creating a regional Certificate Manager certificate for the GitLab, KAS and registry hosts, with one DNS authorization per host.
+- `gitlab_gateway_certificate_dns_records` output listing the CNAME records the DNS zone owner must create for the certificate.
+- `gitlab_gke_gateway` variable (default `null`) exposing GitLab HTTPS through a GKE Gateway of class `gke-l7-regional-external-managed` on the GitLab IP, in front of the chart's Envoy Gateway, with an optional Cloud Armor policy and a backend timeout (default 3600 seconds).
+- `gitlab_enable_ingress` variable (default `true`) controlling `global.ingress.enabled`.
+- `gitlab_shell_load_balancer` variable (default `false`) exposing GitLab Shell on its own regional L4 load balancer on the GitLab IP.
+- Envoy Gateway CRDs installed by the module from the configured chart version when `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` are both `true`.
+- `alekc/kubectl` provider requirement. Run `terraform init -upgrade` and commit the dependency lock file after upgrading.
+
+### Changed
+
+- Minimum Terraform version from 0.13 to 1.3.
+- Envoy Gateway CRDs ownership moves from the GitLab Helm release to Terraform for deployments that already set `gitlab_gateway_api_install_envoy = true`. The release sets `envoy-gateway.crds.enabled = false`.
+
+### Fixed
+
+- Set `global.ingress.configureCertmanager` from `gitlab_enable_certmanager`.
+
+## [2.37.0] - 2026-11-11
+
+### Added
+
 - `gitlab_webservice_startup_probe_enabled` variable (default `false`) adding a startup probe to the GitLab webservice container.
 - `gitlab_webservice_startup_probe_period_seconds` variable (default `10`) setting the period of the webservice startup probe.
 - `gitlab_webservice_startup_probe_timeout_seconds` variable (default `5`) setting the timeout of the webservice startup probe.
@@ -28,24 +51,6 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - `gitlab_registry_request_cpu` variable (default `null`) setting the CPU request of the GitLab Registry container.
 - `gitlab_registry_request_mem` variable (default `null`) setting the memory request of the GitLab Registry container.
 - `gitlab_hpa_behavior_registry` variable (default `null`) setting the scaling behavior of the GitLab Registry HPA.
-- `gke_gateway_api_channel` variable (default `null`) setting the GKE Gateway API channel to `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.
-- `gitlab_proxy_only_subnet_cidr` variable (default `null`) creating the regional proxy-only subnet used by the GKE Gateway load balancer.
-- `gitlab_gateway_certificate_enabled` variable (default `false`) creating a regional Certificate Manager certificate for the GitLab, KAS and registry hosts, with one DNS authorization per host.
-- `gitlab_gateway_certificate_dns_records` output listing the CNAME records the DNS zone owner must create for the certificate.
-- `gitlab_gke_gateway` variable (default `null`) exposing GitLab HTTPS through a GKE Gateway of class `gke-l7-regional-external-managed` on the GitLab IP, in front of the chart's Envoy Gateway, with an optional Cloud Armor policy and a backend timeout (default 3600 seconds).
-- `gitlab_enable_ingress` variable (default `true`) controlling `global.ingress.enabled`.
-- `gitlab_shell_load_balancer` variable (default `false`) exposing GitLab Shell on its own regional L4 load balancer on the GitLab IP.
-- Envoy Gateway CRDs installed by the module from the configured chart version when `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` are both `true`.
-- `alekc/kubectl` provider requirement. Run `terraform init -upgrade` and commit the dependency lock file after upgrading.
-
-### Changed
-
-- Minimum Terraform version from 0.13 to 1.3.
-- Envoy Gateway CRDs ownership moves from the GitLab Helm release to Terraform for deployments that already set `gitlab_gateway_api_install_envoy = true`. The release sets `envoy-gateway.crds.enabled = false`.
-
-### Fixed
-
-- Set `global.ingress.configureCertmanager` from `gitlab_enable_certmanager`.
 
 ## [2.36.0] - 2026-09-17
 
