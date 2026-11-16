@@ -117,7 +117,7 @@ Then perform the following commands on the root folder:
 | gitlab\_monitoring\_allowed\_cidrs | Set the list of the allowed CIDRs for the Gitlab monitoring paths (readiness, liveness and metrics). | `list(string)` | `[]` | no |
 | gitlab\_monitoring\_restrict\_to\_pod\_subnet | Restricrt access to the Gitlab monitoring paths (readiness, liveness and metrics) to the pod cidr. If you specify the 'gitlab\_monitoring\_allowed\_cidrs' list, the pod subnet will be automatically added to the list to grant access to the probes. | `bool` | `true` | no |
 | gitlab\_namespace | Setup  the Kubernetes Namespace where to install gitlab | `string` | `"gitlab"` | no |
-| gitlab\_proxy\_only\_subnet\_cidr | CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC and a firewall rule from it to the GitLab pods. Default to null. | `string` | `null` | no |
+| gitlab\_proxy\_only\_subnet\_cidr | CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it. Default to null. | `string` | `null` | no |
 | gitlab\_registry\_request\_cpu | CPU request for the Gitlab Registry container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_registry\_request\_mem | Memory request for the Gitlab Registry container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_restore\_pv\_size | Set the size of the additional storage for Backup TAR Restoration Process | `number` | `100` | no |

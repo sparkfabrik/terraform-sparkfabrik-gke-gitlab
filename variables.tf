@@ -634,7 +634,7 @@ variable "gke_gateway_api_channel" {
 
 variable "gitlab_proxy_only_subnet_cidr" {
   type        = string
-  description = "CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC and a firewall rule from it to the GitLab pods. Default to null."
+  description = "CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it. Default to null."
   default     = null
 }
 
