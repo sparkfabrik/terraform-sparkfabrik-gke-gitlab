@@ -324,6 +324,14 @@ gitlab:
       behavior:
         ${indent(8, KAS_HPA_BEHAVIOR)}
 %{ endif ~}
+%{ if GKE_GATEWAY ~}
+    ## The chart's KAS policy only sets TLS ALPN, but TLS ends at the GKE load
+    ## balancer, and Envoy Gateway rejects a policy that targets one of the plain
+    ## HTTP listeners sharing port 80. Needs the hashicorp/helm 3.x provider:
+    ## older Helm libraries ignore this null for subchart defaults.
+    clientTrafficPolicy:
+      spec: null
+%{ endif ~}
   webservice:
     minReplicas: ${HPA_MIN_REPLICAS_WEBSERVICE}
     maxReplicas: ${HPA_MAX_REPLICAS_WEBSERVICE}
