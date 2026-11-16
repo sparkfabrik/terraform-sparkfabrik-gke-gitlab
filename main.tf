@@ -656,6 +656,8 @@ locals {
     # Hosts, project and logging
     DOMAIN     = local.domain
     KAS_DOMAIN = local.kas_domain
+    # Not rendered behind the GKE Gateway (GKE_GATEWAY): the chart would put
+    # it on its own Envoy Gateway, whose Service is ClusterIP.
     INGRESS_IP = local.gitlab_address
     PROJECT_ID = var.project_id
     TIMEZONE   = var.gitlab_time_zone
