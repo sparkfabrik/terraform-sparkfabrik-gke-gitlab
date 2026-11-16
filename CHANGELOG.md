@@ -11,7 +11,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 - `gke_gateway_api_channel` variable (default `null`) setting the GKE Gateway API channel to `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.
 - `gitlab_proxy_only_subnet_cidr` variable (default `null`) creating the regional proxy-only subnet used by the GKE Gateway load balancer.
-- `gitlab_gateway_certificate_enabled` variable (default `false`) creating a regional Certificate Manager certificate for the GitLab, KAS and registry hosts, with one DNS authorization per host.
+- `gitlab_gateway_certificate_enabled` variable (default `false`) enabling the Certificate Manager API and creating a regional certificate for the GitLab, KAS and registry hosts, with one DNS authorization per host.
 - `gitlab_gateway_certificate_dns_records` output listing the CNAME records the DNS zone owner must create for the certificate.
 - `gitlab_gke_gateway` variable (default `null`) exposing GitLab HTTPS through a GKE Gateway of class `gke-l7-regional-external-managed` on the GitLab IP, in front of the chart's Envoy Gateway, with an optional Cloud Armor policy and a backend timeout (default 3600 seconds).
 - `gitlab_enable_ingress` variable (default `true`) controlling `global.ingress.enabled`.

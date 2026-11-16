@@ -97,6 +97,8 @@ resource "google_certificate_manager_dns_authorization" "gitlab" {
   location = var.region
   type     = "PER_PROJECT_RECORD"
   domain   = each.value
+
+  depends_on = [module.project_services.project_id]
 }
 
 resource "google_certificate_manager_certificate" "gitlab" {

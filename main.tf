@@ -80,7 +80,7 @@ module "project_services" {
   project_id                  = var.project_id
   disable_services_on_destroy = false
 
-  activate_apis = [
+  activate_apis = concat([
     "compute.googleapis.com",
     "container.googleapis.com",
     "servicenetworking.googleapis.com",
@@ -90,7 +90,7 @@ module "project_services" {
     "containerfilesystem.googleapis.com",
     "storagetransfer.googleapis.com",
     "storage.googleapis.com",
-  ]
+  ], var.gitlab_gateway_certificate_enabled ? ["certificatemanager.googleapis.com"] : [])
 }
 
 # GCS Service Account
