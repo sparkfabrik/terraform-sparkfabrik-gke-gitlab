@@ -97,7 +97,7 @@ Cross-input checks use `precondition` blocks on a `terraform_data` resource, bec
 
 ### Providers
 
-`versions.tf` adds `alekc/kubectl`. `main.tf` adds `provider "kubectl"` with the same host, token and CA as `kubernetes`, and `load_config_file = false`. `required_version` rises to `>= 1.3`, for `optional()` object attributes and `precondition`.
+`versions.tf` adds `alekc/kubectl`. `main.tf` adds `provider "kubectl"` with the same host, token and CA as `kubernetes`, and `load_config_file = false`. `required_version` rises to `>= 1.4`, for `optional()` object attributes, `precondition` and the `terraform_data` resource.
 
 ### Certificate hosts
 

@@ -21,7 +21,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
-- Minimum Terraform version from 0.13 to 1.3.
+- Minimum Terraform version from 0.13 to 1.4.
 - `hashicorp/helm` provider requirement from `~> 2.5` to `~> 3.3`. Update the root module constraint, convert any `provider "helm"` `kubernetes` block to an attribute, and run `terraform init -upgrade`.
 - Envoy Gateway CRDs ownership moves from the GitLab Helm release to Terraform for deployments that already set `gitlab_gateway_api_install_envoy = true`. The release sets `envoy-gateway.crds.enabled = false`.
 
