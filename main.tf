@@ -681,6 +681,7 @@ locals {
     GATEWAY_API_CONFIGURE_CERTMANAGER = var.gitlab_gateway_api_configure_certmanager
     ENVOY_MODULE_CRDS                 = local.envoy_enabled
     GKE_GATEWAY                       = local.gke_gateway_enabled
+    GKE_GATEWAY_EXTERNAL_TLS          = local.gke_gateway_external_tls
     SHELL_LOAD_BALANCER               = var.gitlab_shell_load_balancer
     WORKHORSE_TRUSTED_CIDRS           = local.workhorse_trusted_cidrs
 

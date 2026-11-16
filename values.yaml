@@ -17,6 +17,11 @@ global:
     enabled: ${ENABLE_GATEWAY_API}
     installEnvoy: ${GATEWAY_API_INSTALL_ENVOY}
     configureCertmanager: ${GATEWAY_API_CONFIGURE_CERTMANAGER}
+%{ if GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## TLS ends at the GKE load balancer: chart listeners serve plain HTTP on
+    ## port 443, and the routes set X-Forwarded-Proto to https.
+    externalTlsTermination: true
+%{ endif ~}
 
   ## doc/charts/globals.md#configure-ingress-settings
   ingress:
@@ -203,9 +208,23 @@ envoy-gateway:
 ## HTTP. The load balancer reaches Envoy through module-owned Services, so the
 ## chart's Envoy Service must not create its own load balancer.
 gatewayApiResources:
+%{ if !GKE_GATEWAY_EXTERNAL_TLS ~}
   gateway:
     protocol: HTTP
+%{ endif ~}
   envoy:
+%{ if GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## Merged into the chart's Gateway-wide policy defaults: trust the load
+    ## balancer and the proxy-only subnet hops in X-Forwarded-For.
+    clientTrafficPolicySpec:
+      clientIPDetection:
+        xForwardedFor:
+          numTrustedHops: 2
+%{ else ~}
+    ## The module's webservice policy covers the whole Gateway instead (see
+    ## below), so the chart's own Gateway-wide policy must not compete with it.
+    clientTrafficPolicySpec: null
+%{ endif ~}
     proxySpec:
       provider:
         kubernetes:
@@ -324,7 +343,7 @@ gitlab:
       behavior:
         ${indent(8, KAS_HPA_BEHAVIOR)}
 %{ endif ~}
-%{ if GKE_GATEWAY ~}
+%{ if GKE_GATEWAY && !GKE_GATEWAY_EXTERNAL_TLS ~}
     ## The chart's KAS policy only sets TLS ALPN, but TLS ends at the GKE load
     ## balancer, and Envoy Gateway rejects a policy that targets one of the plain
     ## HTTP listeners sharing port 80. Needs the hashicorp/helm 3.x provider:
@@ -364,6 +383,7 @@ gitlab:
     registry:
       enabled: ${ENABLE_REGISTRY}
 %{ if GKE_GATEWAY ~}
+%{ if !GKE_GATEWAY_EXTERNAL_TLS ~}
     ## Trust the load balancer's X-Forwarded-For and X-Forwarded-Proto: the
     ## load balancer adds the client and its own IP, then Envoy adds the
     ## proxy-only subnet address. Merged into the chart's default spec.
@@ -379,6 +399,7 @@ gitlab:
           clientIPDetection:
             xForwardedFor:
               numTrustedHops: 2
+%{ endif ~}
     workhorse:
       trustedCIDRsForXForwardedFor:
 %{ for cidr_block in WORKHORSE_TRUSTED_CIDRS ~}

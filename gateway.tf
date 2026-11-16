@@ -12,6 +12,13 @@ locals {
   # Chart 10.3 is the first release that uses only standard channel Gateway
   # API resources and lets the webservice ClientTrafficPolicy be overridden.
   helm_chart_supports_gke_gateway = local.helm_chart_major > 10 || (local.helm_chart_major == 10 && local.helm_chart_minor >= 3)
+  # Chart 10.6 adds global.gatewayApi.externalTlsTermination.
+  helm_chart_supports_external_tls_termination = local.helm_chart_major > 10 || (local.helm_chart_major == 10 && local.helm_chart_minor >= 6)
+
+  gke_gateway_external_tls = local.gke_gateway_enabled && try(var.gitlab_gke_gateway.envoy_listener_mode, "http") == "external_tls_termination"
+  # Envoy Gateway maps listener ports below 1024 to port + 10000. The http mode
+  # serves GitLab on the port 80 listeners, external_tls_termination on 443.
+  envoy_backend_target_port = local.gke_gateway_external_tls ? 10443 : 10080
 }
 
 # Cross-input checks. Variable validations cannot reference other inputs on
@@ -28,6 +35,11 @@ resource "terraform_data" "gateway_api_checks" {
     precondition {
       condition     = local.helm_chart_supports_gke_gateway
       error_message = "gitlab_gke_gateway and gitlab_shell_load_balancer require helm_chart_version 10.3 or later, got ${var.helm_chart_version}."
+    }
+
+    precondition {
+      condition     = !local.gke_gateway_external_tls || local.helm_chart_supports_external_tls_termination
+      error_message = "gitlab_gke_gateway.envoy_listener_mode = \"external_tls_termination\" requires helm_chart_version 10.6 or later, got ${var.helm_chart_version}."
     }
 
     precondition {
@@ -225,7 +237,7 @@ resource "kubectl_manifest" "envoy_backend_service" {
           name       = "http"
           port       = 80
           protocol   = "TCP"
-          targetPort = 10080 # Envoy Gateway maps listener ports below 1024 to port + 10000
+          targetPort = local.envoy_backend_target_port
         },
         each.value.app_protocol != null ? { appProtocol = each.value.app_protocol } : {}
       )]
