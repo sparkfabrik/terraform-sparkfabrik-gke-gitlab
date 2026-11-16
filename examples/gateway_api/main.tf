@@ -39,7 +39,9 @@ module "gke_gitlab" {
   certmanager_email = "no-reply@${var.domain}"
   gitlab_log_level  = "info"
 
-  helm_chart_version = "10.4.3"
+  # GitLab 19 requires PostgreSQL 17.
+  helm_chart_version = "10.5.6"
+  postgresql_version = "POSTGRES_17"
   gitlab_install_kas = true
 
   # Gateway API on GKE instead of the NGINX Ingress.
