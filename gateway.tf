@@ -346,6 +346,7 @@ resource "kubectl_manifest" "gke_gateway" {
   depends_on = [
     terraform_data.gateway_api_checks,
     google_compute_subnetwork.proxy_only,
+    kubernetes_namespace.gitlab_namespace,
   ]
 }
 
@@ -439,5 +440,8 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
   })
   server_side_apply = true
 
-  depends_on = [terraform_data.gateway_api_checks]
+  depends_on = [
+    terraform_data.gateway_api_checks,
+    kubernetes_namespace.gitlab_namespace,
+  ]
 }
