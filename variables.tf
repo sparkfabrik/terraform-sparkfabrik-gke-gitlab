@@ -640,7 +640,7 @@ variable "gitlab_proxy_only_subnet_cidr" {
 
 variable "gitlab_gateway_certificate_enabled" {
   type        = bool
-  description = "Choose whether to create the regional Certificate Manager certificate used by the GKE Gateway, with one DNS authorization per GitLab host. Create the records in the gitlab_gateway_certificate_dns_records output so the certificate becomes active. It can be enabled while the NGINX Ingress still serves traffic. Default to false."
+  description = "Choose whether to create the regional Certificate Manager certificates used by the GKE Gateway: one certificate and one DNS authorization per GitLab host. Create the records in the gitlab_gateway_certificate_dns_records output so the certificates become active. It can be enabled while the NGINX Ingress still serves traffic. Default to false."
   default     = false
 }
 

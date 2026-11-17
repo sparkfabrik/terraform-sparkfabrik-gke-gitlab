@@ -113,18 +113,21 @@ resource "google_certificate_manager_dns_authorization" "gitlab" {
   depends_on = [module.project_services.project_id]
 }
 
+# One certificate per host: enabling KAS or the registry adds a certificate
+# and leaves the active ones untouched, so existing hosts keep serving HTTPS
+# while the new host waits for its DNS authorization record.
 resource "google_certificate_manager_certificate" "gitlab" {
-  count = var.gitlab_gateway_certificate_enabled ? 1 : 0
+  for_each = local.gateway_certificate_hosts
 
-  # The host list is part of the name, so a host change creates the new
-  # certificate before the Gateway stops using the old one.
-  name        = "gitlab-gateway-${substr(sha1(join(",", values(local.gateway_certificate_hosts))), 0, 8)}"
+  # Derived from the host, so a host change creates the new certificate
+  # before the Gateway stops using the old one.
+  name        = substr("gitlab-gw-${replace(each.value, ".", "-")}", 0, 63)
   location    = var.region
-  description = "GitLab GKE Gateway certificate"
+  description = "GitLab GKE Gateway certificate for ${each.value}"
 
   managed {
-    domains            = values(local.gateway_certificate_hosts)
-    dns_authorizations = [for role in keys(local.gateway_certificate_hosts) : google_certificate_manager_dns_authorization.gitlab[role].id]
+    domains            = [each.value]
+    dns_authorizations = [google_certificate_manager_dns_authorization.gitlab[each.key].id]
   }
 
   lifecycle {
@@ -329,7 +332,7 @@ resource "kubectl_manifest" "gke_gateway" {
           tls = {
             mode = "Terminate"
             options = {
-              "networking.gke.io/cert-manager-certs" = google_certificate_manager_certificate.gitlab[0].name
+              "networking.gke.io/cert-manager-certs" = join(", ", [for cert in google_certificate_manager_certificate.gitlab : cert.name])
             }
           }
         },
