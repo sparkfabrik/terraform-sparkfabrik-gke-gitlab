@@ -320,8 +320,9 @@ gitlab:
       behavior:
         ${indent(8, SHELL_HPA_BEHAVIOR)}
 %{ endif ~}
-%{ if SHELL_LOAD_BALANCER ~}
-    ## SSH has its own L4 load balancer, and GKE does not serve TCPRoute.
+%{ if SHELL_LOAD_BALANCER || GKE_GATEWAY ~}
+    ## GKE does not serve TCPRoute: SSH goes through its own L4 load balancer
+    ## (gitlab_shell_load_balancer), or stays inside the cluster.
     gatewayRoute:
       enabled: false
 %{ endif ~}
