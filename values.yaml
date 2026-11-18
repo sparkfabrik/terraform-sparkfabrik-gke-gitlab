@@ -5,7 +5,7 @@ global:
     domain: ${DOMAIN}
     https: true
     gitlab: {}
-    externalIP: ${INGRESS_IP}
+    externalIP: ${GKE_GATEWAY ? "" : INGRESS_IP}
     ssh: ~
     kas:
       name: ${KAS_DOMAIN}
@@ -17,12 +17,17 @@ global:
     enabled: ${ENABLE_GATEWAY_API}
     installEnvoy: ${GATEWAY_API_INSTALL_ENVOY}
     configureCertmanager: ${GATEWAY_API_CONFIGURE_CERTMANAGER}
+%{ if GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## TLS ends at the GKE load balancer: chart listeners serve plain HTTP on
+    ## port 443, and the routes set X-Forwarded-Proto to https.
+    externalTlsTermination: true
+%{ endif ~}
 
   ## doc/charts/globals.md#configure-ingress-settings
   ingress:
     apiVersion: networking.k8s.io/v1
-    configureCertmanager: true
-    enabled: true
+    configureCertmanager: ${ENABLE_CERT_MANAGER}
+    enabled: ${ENABLE_INGRESS}
     tls:
       enabled: true
 
@@ -189,12 +194,68 @@ certmanager:
   config:
     enableGatewayAPI: ${ENABLE_GATEWAY_API}
 
+%{ if ENVOY_MODULE_CRDS ~}
+## The module installs the Envoy Gateway CRDs itself (see gateway.tf). The
+## bundled CRD switch also installs experimental Gateway API CRDs, which GKE
+## rejects, and Helm never upgrades CRDs after the first install.
+envoy-gateway:
+  crds:
+    enabled: false
+
+%{ endif ~}
+%{ if GKE_GATEWAY || ENVOY_REPLICAS != "" || ENVOY_MIN_AVAILABLE != "" ~}
+gatewayApiResources:
+%{ if GKE_GATEWAY && !GKE_GATEWAY_EXTERNAL_TLS ~}
+  ## TLS ends at the GKE regional load balancer, so every chart listener is
+  ## plain HTTP.
+  gateway:
+    protocol: HTTP
+%{ endif ~}
+  envoy:
+%{ if GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## Merged into the chart's Gateway-wide policy defaults: trust the load
+    ## balancer and the proxy-only subnet hops in X-Forwarded-For.
+    clientTrafficPolicySpec:
+      clientIPDetection:
+        xForwardedFor:
+          numTrustedHops: 2
+%{ endif ~}
+%{ if GKE_GATEWAY && !GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## The module's webservice policy covers the whole Gateway instead (see
+    ## below), so the chart's own Gateway-wide policy must not compete with it.
+    clientTrafficPolicySpec: null
+%{ endif ~}
+    proxySpec:
+      provider:
+        kubernetes:
+%{ if GKE_GATEWAY ~}
+          ## The GKE load balancer reaches Envoy through module-owned Services,
+          ## so the chart's Envoy Service must not create its own load balancer.
+          envoyService:
+            type: ClusterIP
+%{ endif ~}
+%{ if ENVOY_REPLICAS != "" ~}
+          envoyDeployment:
+            replicas: ${ENVOY_REPLICAS}
+%{ endif ~}
+%{ if ENVOY_MIN_AVAILABLE != "" ~}
+          envoyPDB:
+            minAvailable: ${ENVOY_MIN_AVAILABLE}
+%{ endif ~}
+
+%{ endif ~}
 ## https://docs.gitlab.com/charts/charts/nginx/
 ## https://docs.gitlab.com/charts/architecture/decisions#nginx-ingress
 ## Installation & configuration of charts/ingress-nginx:
 nginx-ingress:
   enabled: ${INSTALL_INGRESS_NGINX}
   controller:
+%{ if NGINX_REPLICAS != "" ~}
+    replicaCount: ${NGINX_REPLICAS}
+%{ endif ~}
+%{ if NGINX_MIN_AVAILABLE != "" ~}
+    minAvailable: ${NGINX_MIN_AVAILABLE}
+%{ endif ~}
     config:
       ssl-reject-handshake: "true"
 
@@ -277,6 +338,13 @@ gitlab:
       behavior:
         ${indent(8, SHELL_HPA_BEHAVIOR)}
 %{ endif ~}
+%{ if SHELL_LOAD_BALANCER || ENVOY_MODULE_CRDS ~}
+    ## GKE does not serve TCPRoute, so the chart's Envoy Gateway cannot route
+    ## SSH: it goes through its own L4 load balancer
+    ## (gitlab_enable_shell_load_balancer), or stays inside the cluster.
+    gatewayRoute:
+      enabled: false
+%{ endif ~}
   kas:
     minReplicas: ${HPA_MIN_REPLICAS_KAS}
     maxReplicas: ${HPA_MAX_REPLICAS_KAS}
@@ -294,6 +362,14 @@ gitlab:
     hpa:
       behavior:
         ${indent(8, KAS_HPA_BEHAVIOR)}
+%{ endif ~}
+%{ if GKE_GATEWAY && !GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## The chart's KAS policy only sets TLS ALPN, but TLS ends at the GKE load
+    ## balancer, and Envoy Gateway rejects a policy that targets one of the plain
+    ## HTTP listeners sharing port 80. Needs the hashicorp/helm 3.x provider:
+    ## older Helm libraries ignore this null for subchart defaults.
+    clientTrafficPolicy:
+      spec: null
 %{ endif ~}
   webservice:
     minReplicas: ${HPA_MIN_REPLICAS_WEBSERVICE}
@@ -326,6 +402,30 @@ gitlab:
 %{ endif ~}
     registry:
       enabled: ${ENABLE_REGISTRY}
+%{ if GKE_GATEWAY ~}
+%{ if !GKE_GATEWAY_EXTERNAL_TLS ~}
+    ## Trust the load balancer's X-Forwarded-For and X-Forwarded-Proto: the
+    ## load balancer adds the client and its own IP, then Envoy adds the
+    ## proxy-only subnet address. Merged into the chart's default spec.
+    ## Every listener is plain HTTP on port 80, so Envoy Gateway rejects a
+    ## policy that targets one listener: target the whole Gateway instead.
+    clientTrafficPolicy:
+      main:
+        spec:
+          targetRefs:
+            - group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gitlab-gw
+          clientIPDetection:
+            xForwardedFor:
+              numTrustedHops: 2
+%{ endif ~}
+    workhorse:
+      trustedCIDRsForXForwardedFor:
+%{ for cidr_block in WORKHORSE_TRUSTED_CIDRS ~}
+        - ${cidr_block}
+%{ endfor ~}
+%{ endif ~}
 %{ if length(MONITORING_ALLOWED_CIDRS) > 0 ~}
     monitoring:
       ipWhitelist:

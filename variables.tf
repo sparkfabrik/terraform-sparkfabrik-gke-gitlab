@@ -369,6 +369,12 @@ variable "gke_services_subnet_cidr" {
   description = "Cidr range to use for gitlab GKE services subnet"
 }
 
+variable "gke_proxy_only_subnet_cidr" {
+  type        = string
+  description = "CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it. Default to null."
+  default     = null
+}
+
 variable "gke_enable_cloudrun" {
   type        = bool
   description = "Enable Google Cloudrun on GKE Cluster. Default false"
@@ -597,6 +603,34 @@ variable "gitlab_install_ingress_nginx" {
   default     = true
 }
 
+variable "gitlab_ingress_nginx_replicas" {
+  type        = number
+  description = "Number of NGINX Ingress controller replicas. It has no effect when gitlab_install_ingress_nginx is false. Leave null to keep the chart default."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_ingress_nginx_replicas == null ? true : var.gitlab_ingress_nginx_replicas >= 1 && floor(var.gitlab_ingress_nginx_replicas) == var.gitlab_ingress_nginx_replicas
+    error_message = "gitlab_ingress_nginx_replicas must be a whole number of at least 1, or null."
+  }
+}
+
+variable "gitlab_ingress_nginx_min_available" {
+  type        = number
+  description = "Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. Keep it lower than the number of replicas, or node drains are blocked. It has no effect when gitlab_install_ingress_nginx is false. Leave null to keep the chart default."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_ingress_nginx_min_available == null ? true : var.gitlab_ingress_nginx_min_available >= 1 && floor(var.gitlab_ingress_nginx_min_available) == var.gitlab_ingress_nginx_min_available
+    error_message = "gitlab_ingress_nginx_min_available must be a whole number of at least 1, or null."
+  }
+}
+
+variable "gitlab_enable_ingress" {
+  type        = bool
+  description = "Choose whether the GitLab chart creates its Ingress resources (global.ingress.enabled). Set it to false when GitLab is exposed through the Gateway API and no Ingress controller runs, so cert-manager does not keep renewing certificates for unused Ingresses. Default to true."
+  default     = true
+}
+
 variable "gitlab_enable_gateway_api" {
   type        = bool
   description = "Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false."
@@ -605,13 +639,79 @@ variable "gitlab_enable_gateway_api" {
 
 variable "gitlab_gateway_api_install_envoy" {
   type        = bool
-  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. The module installs the Envoy Gateway CRDs from the configured chart version and never deletes them. GKE must supply the Gateway API CRDs, so it requires gke_gateway_api_channel = CHANNEL_STANDARD and helm_chart_version 10.3 or later. GKE does not serve TCPRoute, so the chart's GitLab Shell route is disabled: expose SSH with gitlab_enable_shell_load_balancer. Default to false."
   default     = false
+}
+
+variable "gitlab_gateway_api_envoy_replicas" {
+  type        = number
+  description = "Number of Envoy proxy replicas run by the chart's Envoy Gateway. Every request through the Gateway API crosses these pods, so use at least 2 to keep serving during a node drain. It has no effect unless gitlab_enable_gateway_api and gitlab_gateway_api_install_envoy are true. Leave null to keep the Envoy Gateway default of one replica."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_gateway_api_envoy_replicas == null ? true : var.gitlab_gateway_api_envoy_replicas >= 1 && floor(var.gitlab_gateway_api_envoy_replicas) == var.gitlab_gateway_api_envoy_replicas
+    error_message = "gitlab_gateway_api_envoy_replicas must be a whole number of at least 1, or null."
+  }
+}
+
+variable "gitlab_gateway_api_envoy_min_available" {
+  type        = number
+  description = "Minimum number of Envoy proxy pods that must stay available during voluntary disruptions such as a node drain. When set, the chart's Envoy Gateway creates a PodDisruptionBudget for the Envoy proxy. It must be lower than gitlab_gateway_api_envoy_replicas, or node drains are blocked. It has no effect unless gitlab_enable_gateway_api and gitlab_gateway_api_install_envoy are true. Leave null to create no PodDisruptionBudget."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_gateway_api_envoy_min_available == null ? true : var.gitlab_gateway_api_envoy_min_available >= 1 && floor(var.gitlab_gateway_api_envoy_min_available) == var.gitlab_gateway_api_envoy_min_available
+    error_message = "gitlab_gateway_api_envoy_min_available must be a whole number of at least 1, or null."
+  }
 }
 
 variable "gitlab_gateway_api_configure_certmanager" {
   type        = bool
   description = "Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  default     = false
+}
+
+variable "gke_gateway_api_channel" {
+  type        = string
+  description = "Gateway API channel of the GKE cluster: CHANNEL_STANDARD installs the standard Gateway API CRDs and enables the GKE Gateway controller, CHANNEL_DISABLED disables it. GKE does not support the experimental channel. Default to null, which leaves the cluster setting unchanged."
+  default     = null
+
+  validation {
+    condition     = contains(["CHANNEL_STANDARD", "CHANNEL_DISABLED"], coalesce(var.gke_gateway_api_channel, "CHANNEL_STANDARD"))
+    error_message = "gke_gateway_api_channel must be null, CHANNEL_STANDARD or CHANNEL_DISABLED."
+  }
+}
+
+variable "gitlab_enable_gateway_certificate" {
+  type        = bool
+  description = "Choose whether to create the regional Certificate Manager certificates used by the GKE Gateway: one certificate and one DNS authorization per GitLab host. Create the records in the gitlab_gateway_certificate_dns_records output so the certificates become active. It can be enabled while the NGINX Ingress still serves traffic. Default to false."
+  default     = false
+}
+
+variable "gitlab_gke_gateway" {
+  type = object({
+    cloud_armor_policy_name = optional(string)
+    backend_timeout_sec     = optional(number, 3600)
+    envoy_listener_mode     = optional(string, "http")
+    log_sample_rate         = optional(number)
+  })
+  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. cloud_armor_policy_name is the name of an existing regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. log_sample_rate turns on the load balancer request logs for the Envoy backends, with the fraction of requests to log between 0 and 1 (1 logs every request, 0 turns logging off); null leaves the logging setting unmanaged. Cloud Armor verdicts appear only in these logs. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_enable_gateway_certificate, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_gke_gateway == null || contains(["http", "external_tls_termination"], try(var.gitlab_gke_gateway.envoy_listener_mode, "http"))
+    error_message = "gitlab_gke_gateway.envoy_listener_mode must be \"http\" or \"external_tls_termination\"."
+  }
+
+  validation {
+    condition     = var.gitlab_gke_gateway == null || try(var.gitlab_gke_gateway.log_sample_rate == null || (var.gitlab_gke_gateway.log_sample_rate >= 0 && var.gitlab_gke_gateway.log_sample_rate <= 1), true)
+    error_message = "gitlab_gke_gateway.log_sample_rate must be between 0 and 1."
+  }
+}
+
+variable "gitlab_enable_shell_load_balancer" {
+  type        = bool
+  description = "Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab_install_ingress_nginx = false. Default to false."
   default     = false
 }
 
