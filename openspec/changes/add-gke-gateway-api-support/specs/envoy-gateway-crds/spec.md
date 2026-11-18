@@ -42,11 +42,11 @@ The module SHALL apply the Envoy CRDs with server-side apply, so the size of a C
 - **WHEN** the module installs the `envoyproxies` CRD, which exceeds 1 MiB
 - **THEN** the install succeeds
 
-### Requirement: Safe removal order
+### Requirement: CRDs kept when Envoy is disabled
 
-When the consumer disables the bundled Envoy Gateway, the module SHALL remove the GitLab release's Envoy resources before deleting the Envoy CRDs.
+The module SHALL NOT delete the Envoy CRDs. When the consumer disables the bundled Envoy Gateway, the GitLab release SHALL remove its Envoy resources, and the CRDs SHALL stay in the cluster.
 
 #### Scenario: Feature disabled
 
 - **WHEN** the consumer disables the bundled Envoy Gateway
-- **THEN** the apply completes without errors about CRDs deleted while resources still use them
+- **THEN** the apply completes without errors, and the Envoy CRDs still exist

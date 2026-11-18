@@ -31,16 +31,19 @@ See proposal.md for motivation. The facts below shape the approach.
 
 ### Inputs
 
-| Input                               | Type and default                                                                                               | Effect                                                                                                                                                                                    |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gke_gateway_api_channel`           | `string`, `null`                                                                                               | Passed to the GKE module's `gateway_api_channel`. Validated to `null`, `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.                                                                          |
-| `gke_proxy_only_subnet_cidr`        | `string`, `null`                                                                                               | Creates a `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`).                                                                                                                                |
-| `gitlab_enable_gateway_certificate` | `bool`, `false`                                                                                                | Creates the DNS authorizations, the regional certificate and the records output. Allowed while NGINX runs.                                                                                |
-| `gitlab_gke_gateway`                | `object({ cloud_armor_policy_name = optional(string), backend_timeout_sec = optional(number, 3600) })`, `null` | Creates the GKE Gateway, routes and policies, and switches the chart's Envoy listeners to plain HTTP.                                                                                     |
-| `gitlab_enable_shell_load_balancer` | `bool`, `false`                                                                                                | Creates the SSH `LoadBalancer` Service and turns off the chart's shell `TCPRoute`.                                                                                                        |
-| `gitlab_enable_ingress`             | `bool`, `true`                                                                                                 | Drives `global.ingress.enabled`. Set to `false` on the Gateway path, so the chart stops rendering Ingresses that no controller serves and cert-manager stops renewing their certificates. |
+| Input                                                                 | Type and default                                                                                                                                               | Effect                                                                                                                                                                                    |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gke_gateway_api_channel`                                             | `string`, `null`                                                                                                                                               | Passed to the GKE module's `gateway_api_channel`. Validated to `null`, `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.                                                                          |
+| `gke_proxy_only_subnet_cidr`                                          | `string`, `null`                                                                                                                                               | Creates a `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`).                                                                                                                                |
+| `gitlab_enable_gateway_certificate`                                   | `bool`, `false`                                                                                                                                                | Creates one DNS authorization and one regional certificate per host, and the records output. Allowed while NGINX runs.                                                                    |
+| `gitlab_gke_gateway`                                                  | `object({ cloud_armor_policy_name = optional(string), backend_timeout_sec = optional(number, 3600), envoy_listener_mode = optional(string, "http") })`, `null` | Creates the GKE Gateway, routes and policies, and makes the chart's Envoy listeners serve plain HTTP in the selected mode.                                                                |
+| `gitlab_gateway_api_envoy_replicas`                                   | `number`, `null`                                                                                                                                               | Sets the Envoy proxy replicas when the chart's Envoy Gateway is installed. `null` keeps the Envoy Gateway default of one.                                                                 |
+| `gitlab_gateway_api_envoy_min_available`                              | `number`, `null`                                                                                                                                               | Creates a PodDisruptionBudget for the Envoy proxy. Must be lower than the replicas.                                                                                                       |
+| `gitlab_ingress_nginx_replicas`, `gitlab_ingress_nginx_min_available` | `number`, `null`                                                                                                                                               | Mirror the two Envoy inputs for the NGINX Ingress controller. `null` keeps the chart defaults.                                                                                            |
+| `gitlab_enable_shell_load_balancer`                                   | `bool`, `false`                                                                                                                                                | Creates the SSH `LoadBalancer` Service and turns off the chart's shell `TCPRoute`.                                                                                                        |
+| `gitlab_enable_ingress`                                               | `bool`, `true`                                                                                                                                                 | Drives `global.ingress.enabled`. Set to `false` on the Gateway path, so the chart stops rendering Ingresses that no controller serves and cert-manager stops renewing their certificates. |
 
-New output: `gitlab_gateway_certificate_dns_records`, a map keyed by host with `name`, `type` and `data`.
+New output: `gitlab_gateway_certificate_dns_records`, a map keyed by role (`gitlab`, `kas`, `registry`) with `host`, `name`, `type` and `data`.
 
 **Why a separate certificate input:** the certificate must be `ACTIVE` before cutover, but the Gateway cannot exist while NGINX holds the IP. Tying the certificate to `gitlab_gke_gateway` would force the certificate to provision during the outage. Alternative considered: one `gitlab_gke_gateway` object with a nested `create_gateway` flag. Rejected because a separate boolean reads more clearly in the consumer's diff.
 
@@ -48,10 +51,11 @@ New output: `gitlab_gateway_certificate_dns_records`, a map keyed by host with `
 
 When `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` are both true:
 
-1. `data "helm_template"` renders the same `gitlab` chart at `var.helm_chart_version` with the module's real values plus `envoy-gateway.crds.enabled=true` and `include_crds = true`. Placeholder values fail the chart's configuration checks, so the real values are required.
+1. `data "helm_template"` renders the same `gitlab` chart at `var.helm_chart_version` with the module's values plus `envoy-gateway.crds.enabled=true` and `include_crds = true`. Values that stay unknown until apply on a new deployment (hosts, IPs and bucket names) are replaced with placeholders, so the render and the CRD keys are known at plan time. The other values stay real, because the chart's configuration checks need a consistent set.
 2. The module splits the rendered manifest into documents and keeps only `CustomResourceDefinition` objects whose `spec.group` is `gateway.envoyproxy.io`, keyed by name.
 3. `kubectl_manifest` applies each with `server_side_apply = true` and `force_conflicts = true`. Force is needed because releases that installed Envoy before this change own those CRDs through Helm.
-4. The real release sets `envoy-gateway.crds.enabled=false`, and `helm_release.gitlab` depends on the CRD resources. Terraform therefore upgrades the release before the CRDs and removes the release's Envoy resources before deleting the CRDs.
+4. The real release sets `envoy-gateway.crds.enabled=false`, and `helm_release.gitlab` depends on the CRD resources, so the CRDs exist before the release and are upgraded before it.
+5. The CRD resources set `apply_only`, so the module never deletes a CRD. When Envoy is turned off, Terraform destroys the CRD instances before it updates the release, and deleting a CRD deletes every object of its kind, which breaks that update. The CRDs stay in the cluster, as with Helm. `create_before_destroy` would reorder the two steps, but Terraform extends it to every resource the CRDs depend on, including the cluster and the database, in every deployment.
 
 Alternatives considered:
 
@@ -62,10 +66,10 @@ Alternatives considered:
 
 ### Kubernetes objects for the GKE Gateway
 
-All are `kubectl_manifest` resources with server-side apply in the GitLab namespace, created when `gitlab_gke_gateway` is set. Services use server-side apply too, because GKE writes NEG and load balancer annotations on them, which a `kubernetes_service` would report as drift on every plan. The SSH `LoadBalancer` Service follows the same rule.
+All are `kubectl_manifest` resources with server-side apply in the GitLab namespace, created when `gitlab_gke_gateway` is set. The Gateway, the SSH Service and the backend policies set `wait`, so a delete returns only after GKE has removed the load balancer resources that use the proxy-only subnet, the address and the Cloud Armor policy. Services use server-side apply too, because GKE writes NEG and load balancer annotations on them, which a `kubernetes_service` would report as drift on every plan. The SSH `LoadBalancer` Service follows the same rule. None of these objects depends on the Helm release: they use the release name as a constant and wait only for the namespace, so Terraform creates them while the release is still upgrading, and the load balancers are ready as soon as the pods are. The routes depend on the backend Services.
 
-- **Gateway** of class `gke-l7-regional-external-managed`, `spec.addresses` set to the GitLab address by name (`NamedAddress`). An HTTPS listener on 443 uses `tls.options` `networking.gke.io/cert-manager-certs: <certificate name>`. A regional Gateway does not use a certificate map. An HTTP listener on 80 serves a redirect to HTTPS, keeping NGINX's port 80 behavior.
-- **Two Envoy backend Services** of type ClusterIP that select the Envoy pods by Envoy Gateway's owning-gateway labels. Both target the same Envoy container port. `gitlab-envoy-http` has no `appProtocol`, so the load balancer speaks HTTP/1.1, and `gitlab-envoy-h2c` sets `appProtocol: kubernetes.io/h2c`.
+- **Gateway** of class `gke-l7-regional-external-managed`, `spec.addresses` set to the GitLab address by name (`NamedAddress`). An HTTPS listener on 443 uses `tls.options` `networking.gke.io/cert-manager-certs` with the comma-separated names of the per-host certificates. A regional Gateway does not use a certificate map. An HTTP listener on 80 serves a redirect to HTTPS, keeping NGINX's port 80 behavior.
+- **Two Envoy backend Services** of type ClusterIP that select the Envoy pods by Envoy Gateway's owning-gateway labels. Both target the same Envoy container port: `10080` in `http` mode and `10443` in `external_tls_termination` mode. `gitlab-envoy-http` has no `appProtocol`, so the load balancer speaks HTTP/1.1, and `gitlab-envoy-h2c` sets `appProtocol: kubernetes.io/h2c`.
 - **HTTPRoutes:** the HTTP listener redirects to HTTPS. The GitLab host and the registry host (when enabled) go to `gitlab-envoy-http`. The KAS host sends requests with `Upgrade: websocket` to `gitlab-envoy-http`, and everything else to `gitlab-envoy-h2c`.
 - **HealthCheckPolicy** on both Services: HTTP `/ready` on port `19003`.
 - **GCPBackendPolicy** on both Services: `timeoutSec` from `backend_timeout_sec`, and `securityPolicy` from `cloud_armor_policy_name` when set.
@@ -74,14 +78,32 @@ All are `kubectl_manifest` resources with server-side apply in the GitLab namesp
 
 ### Envoy and chart values
 
-Passed through `values.yaml` when `gitlab_gke_gateway` is set:
+Passed through `values.yaml` when `gitlab_gke_gateway` is set. `envoy_listener_mode` selects how the chart's Envoy serves the plain HTTP traffic from the load balancer.
 
-- `gatewayApiResources.gateway.protocol` is `HTTP`, so every chart listener without its own protocol (`gitlab-web`, `kas-web`, `registry-web`) is plain HTTP on port 80 without `tls`, because TLS ends at the load balancer. The section-scoped `ClientTrafficPolicy` still targets `gitlab-web`, so `KeepUnchanged` applies on the listener that receives traffic.
-- `gatewayApiResources.envoy.proxySpec` sets the chart's Envoy Service to `type: ClusterIP`. The chart default, `LoadBalancer`, would create a second L4 load balancer with an ephemeral IP.
-- The webservice `clientTrafficPolicy.main.spec` is set to the chart default plus client IP detection that trusts the load balancer hops, so Envoy keeps the forwarded client IP and `X-Forwarded-Proto: https`. The exact field is confirmed in the scratch test.
+In `http` mode (default, chart 10.3 or later):
+
+- `gatewayApiResources.gateway.protocol` is `HTTP`, so every chart listener without its own protocol (`gitlab-web`, `kas-web`, `registry-web`) is plain HTTP on port 80.
+- Envoy Gateway rejects a `ClientTrafficPolicy` that targets one of several HTTP listeners sharing a port. The webservice `clientTrafficPolicy.main.spec` therefore targets the whole `gitlab-gw` Gateway, and adds client IP detection that trusts the two load balancer hops to the chart's default spec.
+- `gitlab.kas.clientTrafficPolicy.spec` and `gatewayApiResources.envoy.clientTrafficPolicySpec` are `null`, so the chart's KAS policy and its Gateway-wide policy do not compete with the webservice one. The `null` needs the `hashicorp/helm` 3.x provider.
+
+In `external_tls_termination` mode (chart 10.6 or later):
+
+- `global.gatewayApi.externalTlsTermination` is `true`. The chart serves HTTP on port 443, skips the section-scoped policies, and sets `X-Forwarded-Proto: https` on its routes.
+- `gatewayApiResources.envoy.clientTrafficPolicySpec` adds the two trusted hops to the chart's Gateway-wide policy.
+
+In both modes:
+
+- `gatewayApiResources.envoy.proxySpec` sets the chart's Envoy Service to `type: ClusterIP`. The chart default, `LoadBalancer`, would create a second L4 load balancer.
+- `global.hosts.externalIP` is left empty, so the chart does not put the GitLab IP on its own Gateway.
 - `gitlab.webservice.workhorse.trustedCIDRsForXForwardedFor` lists the proxy-only subnet and the GitLab IP as `/32`.
 - `global.gatewayApi.configureCertmanager` stays `false`.
-- `global.ingress.configureCertmanager` follows `gitlab_enable_certmanager`, instead of the hardcoded `true`.
+
+Whenever the chart's Envoy Gateway is installed, with or without the GKE Gateway:
+
+- `gitlab-shell.gatewayRoute.enabled` is `false`, because GKE does not serve `TCPRoute`.
+- `gatewayApiResources.envoy.proxySpec` sets `envoyDeployment.replicas` from `gitlab_gateway_api_envoy_replicas` and `envoyPDB.minAvailable` from `gitlab_gateway_api_envoy_min_available`, when they are set.
+
+Independently, `global.ingress.configureCertmanager` follows `gitlab_enable_certmanager`, instead of the hardcoded `true`.
 
 ### Proxy-only subnet firewall
 
@@ -92,16 +114,19 @@ The module creates no firewall rule. When the first Gateway exists, the GKE Gate
 Cross-input checks use `precondition` blocks on a `terraform_data` resource, because `variable` validation in Terraform before 1.9 cannot reference other inputs:
 
 - `gitlab_gke_gateway` or `gitlab_enable_shell_load_balancer` require `gitlab_install_ingress_nginx = false`.
-- `gitlab_gke_gateway` requires `gke_gateway_api_channel = "CHANNEL_STANDARD"`, `gke_proxy_only_subnet_cidr`, `gitlab_enable_gateway_certificate`, `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy`.
-- Either feature requires `helm_chart_version` 10.3 or later, compared on the major and minor numbers.
+- `gitlab_gateway_api_install_envoy` requires `gke_gateway_api_channel = "CHANNEL_STANDARD"`, because the module installs only the Envoy CRDs and GKE supplies the Gateway API CRDs.
+- `gitlab_gke_gateway` requires `gke_proxy_only_subnet_cidr`, `gitlab_enable_gateway_certificate`, `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy`.
+- `gitlab_enable_shell_load_balancer` requires `gitlab_gke_gateway` when `gitlab_enable_gateway_api` is true. Without the GKE Gateway, the chart's own Gateway keeps the GitLab IP and its SSH listener on port 22.
+- Each of the three features requires `helm_chart_version` 10.3 or later, compared on the major and minor numbers.
+- `envoy_listener_mode = "external_tls_termination"` requires `helm_chart_version` 10.6 or later.
 
 ### Providers
 
-`versions.tf` adds `alekc/kubectl`. `main.tf` adds `provider "kubectl"` with the same host, token and CA as `kubernetes`, and `load_config_file = false`. `required_version` rises to `>= 1.4`, for `optional()` object attributes, `precondition` and the `terraform_data` resource.
+`versions.tf` adds `alekc/kubectl` and raises `hashicorp/helm` to `~> 3.3`, whose Helm library honours `null` overrides of subchart defaults. `main.tf` adds `provider "kubectl"` with the same host, token and CA as `kubernetes`, and `load_config_file = false`. `required_version` rises to `>= 1.4`, for `optional()` object attributes, `precondition` and the `terraform_data` resource.
 
 ### Certificate hosts
 
-The host list is built from the module's own settings: `gitlab.<domain>`, the KAS host when `gitlab_install_kas` is true (`local.kas_domain`, or `kas.<domain>` when empty), and `registry.<domain>` when `gitlab_enable_registry` is true. Each host has one `google_certificate_manager_dns_authorization` (`location = var.region`, `type = "PER_PROJECT_RECORD"`), named from the host so it is not replaced by unrelated changes.
+The host list is built from the module's own settings: `gitlab.<domain>`, the KAS host when `gitlab_install_kas` is true (`local.kas_domain`, or `kas.<domain>` when empty), and `registry.<domain>` when `gitlab_enable_registry` is true. Each host has one `google_certificate_manager_dns_authorization` (`location = var.region`, `type = "PER_PROJECT_RECORD"`), named from the host so it is not replaced by unrelated changes. Each host also has its own certificate, named from the host, with `create_before_destroy`. Enabling KAS or the registry adds a certificate and leaves the active ones untouched, so existing hosts keep serving HTTPS while the new host waits for its DNS record.
 
 ## Risks / Trade-offs
 

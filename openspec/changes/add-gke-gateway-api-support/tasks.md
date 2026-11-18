@@ -19,7 +19,7 @@
 - [x] 3.1 Add `data "helm_template"` rendering the `gitlab` chart at `var.helm_chart_version` with the module's values, `envoy-gateway.crds.enabled=true` and `include_crds = true`, only when the gateway API and Envoy inputs are both true; verify the data source is absent from the default-input plan
 - [x] 3.2 Filter the rendered documents to `CustomResourceDefinition` objects in `gateway.envoyproxy.io`, keyed by name, and apply each with `kubectl_manifest` (`server_side_apply = true`, `force_conflicts = true`); verify chart 10.4.3 yields exactly the 8 Envoy CRDs and no `gateway.networking.k8s.io` CRD
 - [x] 3.3 Set `envoy-gateway.crds.enabled=false` in `values.yaml` and add the CRD resources to `helm_release.gitlab` `depends_on`; verify in the scratch project that a first apply installs the CRDs before the release, with no GKE admission denial
-- [ ] 3.4 Verify in the scratch project that raising `helm_chart_version` to a release bundling a newer Envoy updates the CRDs in the same apply, and that disabling Envoy removes the release's Envoy resources before the CRDs without errors
+- [ ] 3.4 Verify in the scratch project that raising `helm_chart_version` to a release bundling a newer Envoy updates the CRDs in the same apply, and that disabling Envoy updates the release without errors and leaves the CRDs in place
 
 ## 4. Chart values for the Gateway path
 
@@ -59,6 +59,13 @@
 - [x] 8.5 Add `gitlab_gke_gateway.envoy_listener_mode`: `http` (default, chart 10.3 or later) also removes the chart's Gateway-wide policy, and `external_tls_termination` (chart 10.6 or later) uses `global.gatewayApi.externalTlsTermination` with the backends on container port 10443; verify the `http` mode plans only the values change on the test deployment, and render `external_tls_termination` against the chart's main branch
 - [ ] 8.6 When chart 10.6.0 is released, upgrade the test deployment in `http` mode (covers 3.4 with the Envoy Gateway 1.10 CRDs), then switch to `external_tls_termination`; verify the checks of 4.3, 5.1 to 5.3 and 6.1 and measure the switch downtime
 - [ ] 8.7 Rerun the `gitlab-platform` plan against the release with the `hashicorp/helm` 3.x constraint and syntax, and confirm default inputs show no changes
+- [x] 8.8 Never delete the Envoy CRDs (`apply_only`): turning Envoy off destroyed them before the release update, which deletes every Envoy object and breaks the update; verify the CRD resources set `apply_only`
+- [x] 8.9 Require `gke_gateway_api_channel = "CHANNEL_STANDARD"` whenever the chart's Envoy Gateway is installed, and disable the chart's shell `TCPRoute` in that case too; verify the plan fails without the channel and the rendered chart has no `TCPRoute`
+- [x] 8.10 Reject `gitlab_enable_shell_load_balancer` together with the chart's own Gateway when `gitlab_gke_gateway` is not set; verify the plan fails
+- [x] 8.11 Add `gitlab_gateway_api_envoy_replicas` and `gitlab_gateway_api_envoy_min_available`, and mirror them for NGINX with `gitlab_ingress_nginx_replicas` and `gitlab_ingress_nginx_min_available`; verify chart 10.5.6 renders the `EnvoyProxy` and the NGINX controller with those values, and no override when they are `null`
+- [x] 8.12 Set `wait` on the Gateway, the SSH Service and the backend policies, so a delete waits for GKE to release the load balancer resources
+- [x] 8.13 Create the backend Services, their policies and the SSH Service without waiting for the Helm release, and the routes after the backend Services; verify in the dependency graph that none of them depends on `helm_release.gitlab`
+- [ ] 8.14 Verify on the test deployment that turning Envoy off brings NGINX back and leaves the Envoy CRDs in place, and that removing the GKE Gateway waits for the load balancer cleanup. Then repeat the cutover and compare its downtime with the first one (7 min 8 s for web, about 4.5 min for SSH)
 
 ## Workflow follow-up
 

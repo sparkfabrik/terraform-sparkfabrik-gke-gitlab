@@ -96,17 +96,17 @@ The module SHALL attach a regional Cloud Armor security policy, passed by name, 
 
 ### Requirement: Regional certificate for served hosts
 
-When the consumer enables the gateway certificate, the module SHALL create one regional Google-managed Certificate Manager certificate covering exactly the hosts GitLab serves: the GitLab host, the KAS host when KAS is installed, and the registry host when the registry is enabled. The Gateway SHALL use it for TLS.
+When the consumer enables the gateway certificate, the module SHALL create one regional Google-managed Certificate Manager certificate for each host GitLab serves: the GitLab host, the KAS host when KAS is installed, and the registry host when the registry is enabled. The Gateway SHALL use them for TLS. Adding a host SHALL NOT replace the certificates of the other hosts.
 
 #### Scenario: Certificate created while NGINX serves traffic
 
 - **WHEN** the consumer enables the gateway certificate and keeps the NGINX Ingress enabled
-- **THEN** the apply creates the certificate and NGINX keeps serving traffic
+- **THEN** the apply creates the certificates and NGINX keeps serving traffic
 
 #### Scenario: Hosts follow enabled components
 
 - **WHEN** KAS is installed and the registry is disabled
-- **THEN** the certificate covers the GitLab host and the KAS host, and no other names
+- **THEN** the module creates one certificate for the GitLab host and one for the KAS host, and no other
 
 ### Requirement: DNS authorization records output
 
@@ -161,7 +161,7 @@ The load balancer SHALL carry KAS WebSocket upgrades over HTTP/1.1 and KAS gRPC 
 
 ### Requirement: Conflicting configuration rejected
 
-The module SHALL reject configurations where the GKE Gateway or the SSH load balancer is enabled together with the NGINX Ingress, or with a GitLab chart version earlier than 10.3, or where the GKE Gateway is enabled without Gateway API on the cluster, the proxy-only subnet, the gateway certificate or the chart's Envoy Gateway.
+The module SHALL reject configurations where the GKE Gateway or the SSH load balancer is enabled together with the NGINX Ingress, or with a GitLab chart version earlier than 10.3, or where the GKE Gateway is enabled without the proxy-only subnet, the gateway certificate or the chart's Envoy Gateway. It SHALL also reject the chart's Envoy Gateway without the standard Gateway API channel on the cluster, and the SSH load balancer together with the chart's own Gateway when the GKE Gateway is not enabled.
 
 #### Scenario: NGINX still enabled
 
