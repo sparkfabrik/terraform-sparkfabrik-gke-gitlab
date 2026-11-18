@@ -90,7 +90,7 @@ module "project_services" {
     "containerfilesystem.googleapis.com",
     "storagetransfer.googleapis.com",
     "storage.googleapis.com",
-  ], var.gitlab_gateway_certificate_enabled ? ["certificatemanager.googleapis.com"] : [])
+  ], var.gitlab_enable_gateway_certificate ? ["certificatemanager.googleapis.com"] : [])
 }
 
 # GCS Service Account
@@ -682,7 +682,7 @@ locals {
     ENVOY_MODULE_CRDS                 = local.envoy_enabled
     GKE_GATEWAY                       = local.gke_gateway_enabled
     GKE_GATEWAY_EXTERNAL_TLS          = local.gke_gateway_external_tls
-    SHELL_LOAD_BALANCER               = var.gitlab_shell_load_balancer
+    SHELL_LOAD_BALANCER               = var.gitlab_enable_shell_load_balancer
     WORKHORSE_TRUSTED_CIDRS           = local.workhorse_trusted_cidrs
 
     # Optional components

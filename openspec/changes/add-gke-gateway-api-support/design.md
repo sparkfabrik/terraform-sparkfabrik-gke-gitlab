@@ -31,14 +31,14 @@ See proposal.md for motivation. The facts below shape the approach.
 
 ### Inputs
 
-| Input                                | Type and default                                                                                       | Effect                                                                                                                                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `gke_gateway_api_channel`            | `string`, `null`                                                                                       | Passed to the GKE module's `gateway_api_channel`. Validated to `null`, `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.                                                                          |
-| `gke_proxy_only_subnet_cidr`         | `string`, `null`                                                                                       | Creates a `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`).                                                                                                                                |
-| `gitlab_gateway_certificate_enabled` | `bool`, `false`                                                                                        | Creates the DNS authorizations, the regional certificate and the records output. Allowed while NGINX runs.                                                                                |
-| `gitlab_gke_gateway`                 | `object({ security_policy = optional(string), backend_timeout_sec = optional(number, 3600) })`, `null` | Creates the GKE Gateway, routes and policies, and switches the chart's Envoy listeners to plain HTTP.                                                                                     |
-| `gitlab_shell_load_balancer`         | `bool`, `false`                                                                                        | Creates the SSH `LoadBalancer` Service and turns off the chart's shell `TCPRoute`.                                                                                                        |
-| `gitlab_enable_ingress`              | `bool`, `true`                                                                                         | Drives `global.ingress.enabled`. Set to `false` on the Gateway path, so the chart stops rendering Ingresses that no controller serves and cert-manager stops renewing their certificates. |
+| Input                               | Type and default                                                                                       | Effect                                                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gke_gateway_api_channel`           | `string`, `null`                                                                                       | Passed to the GKE module's `gateway_api_channel`. Validated to `null`, `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.                                                                          |
+| `gke_proxy_only_subnet_cidr`        | `string`, `null`                                                                                       | Creates a `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`).                                                                                                                                |
+| `gitlab_enable_gateway_certificate` | `bool`, `false`                                                                                        | Creates the DNS authorizations, the regional certificate and the records output. Allowed while NGINX runs.                                                                                |
+| `gitlab_gke_gateway`                | `object({ security_policy = optional(string), backend_timeout_sec = optional(number, 3600) })`, `null` | Creates the GKE Gateway, routes and policies, and switches the chart's Envoy listeners to plain HTTP.                                                                                     |
+| `gitlab_enable_shell_load_balancer` | `bool`, `false`                                                                                        | Creates the SSH `LoadBalancer` Service and turns off the chart's shell `TCPRoute`.                                                                                                        |
+| `gitlab_enable_ingress`             | `bool`, `true`                                                                                         | Drives `global.ingress.enabled`. Set to `false` on the Gateway path, so the chart stops rendering Ingresses that no controller serves and cert-manager stops renewing their certificates. |
 
 New output: `gitlab_gateway_certificate_dns_records`, a map keyed by host with `name`, `type` and `data`.
 
@@ -91,8 +91,8 @@ The module creates no firewall rule. When the first Gateway exists, the GKE Gate
 
 Cross-input checks use `precondition` blocks on a `terraform_data` resource, because `variable` validation in Terraform before 1.9 cannot reference other inputs:
 
-- `gitlab_gke_gateway` or `gitlab_shell_load_balancer` require `gitlab_install_ingress_nginx = false`.
-- `gitlab_gke_gateway` requires `gke_gateway_api_channel = "CHANNEL_STANDARD"`, `gke_proxy_only_subnet_cidr`, `gitlab_gateway_certificate_enabled`, `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy`.
+- `gitlab_gke_gateway` or `gitlab_enable_shell_load_balancer` require `gitlab_install_ingress_nginx = false`.
+- `gitlab_gke_gateway` requires `gke_gateway_api_channel = "CHANNEL_STANDARD"`, `gke_proxy_only_subnet_cidr`, `gitlab_enable_gateway_certificate`, `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy`.
 - Either feature requires `helm_chart_version` 10.3 or later, compared on the major and minor numbers.
 
 ### Providers
@@ -120,8 +120,8 @@ The host list is built from the module's own settings: `gitlab.<domain>`, the KA
 For a consumer on NGINX, such as `gitlab-platform`:
 
 1. Upgrade the module, run `terraform init -upgrade`, commit the lock file, and confirm the plan shows no changes.
-2. Set `gke_gateway_api_channel = "CHANNEL_STANDARD"`, `gke_proxy_only_subnet_cidr` and `gitlab_gateway_certificate_enabled = true`, and apply. Add the output CNAME records in the DNS repo, then wait until the certificate is `ACTIVE`. NGINX keeps serving traffic.
-3. Cutover apply: set `gitlab_install_ingress_nginx = false`, `gitlab_enable_ingress = false`, `gitlab_enable_gateway_api = true`, `gitlab_gateway_api_install_envoy = true`, `gitlab_gke_gateway` and `gitlab_shell_load_balancer = true`. Expect a short outage while the NGINX forwarding rule is released and the Gateway takes the IP.
+2. Set `gke_gateway_api_channel = "CHANNEL_STANDARD"`, `gke_proxy_only_subnet_cidr` and `gitlab_enable_gateway_certificate = true`, and apply. Add the output CNAME records in the DNS repo, then wait until the certificate is `ACTIVE`. NGINX keeps serving traffic.
+3. Cutover apply: set `gitlab_install_ingress_nginx = false`, `gitlab_enable_ingress = false`, `gitlab_enable_gateway_api = true`, `gitlab_gateway_api_install_envoy = true`, `gitlab_gke_gateway` and `gitlab_enable_shell_load_balancer = true`. Expect a short outage while the NGINX forwarding rule is released and the Gateway takes the IP.
 4. Optional: set `gitlab_enable_certmanager = false` once no Ingress needs it.
 
 Rollback: revert the step 3 inputs and apply. NGINX and cert-manager return, and the certificate stays in place for a later retry.

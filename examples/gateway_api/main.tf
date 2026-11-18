@@ -45,14 +45,14 @@ module "gke_gitlab" {
   gitlab_install_kas = true
 
   # Gateway API on GKE instead of the NGINX Ingress.
-  gitlab_install_ingress_nginx       = false
-  gitlab_enable_ingress              = false
-  gitlab_enable_gateway_api          = true
-  gitlab_gateway_api_install_envoy   = true
-  gke_gateway_api_channel            = "CHANNEL_STANDARD"
-  gke_proxy_only_subnet_cidr         = var.proxy_only_subnet_cidr
-  gitlab_gateway_certificate_enabled = true
-  gitlab_shell_load_balancer         = true
+  gitlab_install_ingress_nginx      = false
+  gitlab_enable_ingress             = false
+  gitlab_enable_gateway_api         = true
+  gitlab_gateway_api_install_envoy  = true
+  gke_gateway_api_channel           = "CHANNEL_STANDARD"
+  gke_proxy_only_subnet_cidr        = var.proxy_only_subnet_cidr
+  gitlab_enable_gateway_certificate = true
+  gitlab_enable_shell_load_balancer = true
 
   gitlab_gke_gateway = {
     security_policy = google_compute_region_security_policy.gitlab.name

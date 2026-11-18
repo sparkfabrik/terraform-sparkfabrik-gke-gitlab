@@ -638,7 +638,7 @@ variable "gke_gateway_api_channel" {
   }
 }
 
-variable "gitlab_gateway_certificate_enabled" {
+variable "gitlab_enable_gateway_certificate" {
   type        = bool
   description = "Choose whether to create the regional Certificate Manager certificates used by the GKE Gateway: one certificate and one DNS authorization per GitLab host. Create the records in the gitlab_gateway_certificate_dns_records output so the certificates become active. It can be enabled while the NGINX Ingress still serves traffic. Default to false."
   default     = false
@@ -650,7 +650,7 @@ variable "gitlab_gke_gateway" {
     backend_timeout_sec = optional(number, 3600)
     envoy_listener_mode = optional(string, "http")
   })
-  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. security_policy is the name of a regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_gateway_certificate_enabled, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
+  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. security_policy is the name of a regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_enable_gateway_certificate, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
   default     = null
 
   validation {
@@ -659,7 +659,7 @@ variable "gitlab_gke_gateway" {
   }
 }
 
-variable "gitlab_shell_load_balancer" {
+variable "gitlab_enable_shell_load_balancer" {
   type        = bool
   description = "Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab_install_ingress_nginx = false. Default to false."
   default     = false

@@ -24,17 +24,17 @@ locals {
 # Cross-input checks. Variable validations cannot reference other inputs on
 # the Terraform versions this module supports, so they live here.
 resource "terraform_data" "gateway_api_checks" {
-  count = local.gke_gateway_enabled || var.gitlab_shell_load_balancer ? 1 : 0
+  count = local.gke_gateway_enabled || var.gitlab_enable_shell_load_balancer ? 1 : 0
 
   lifecycle {
     precondition {
       condition     = !var.gitlab_install_ingress_nginx
-      error_message = "gitlab_gke_gateway and gitlab_shell_load_balancer require gitlab_install_ingress_nginx = false: the NGINX Ingress holds the same IP on ports 22 to 443."
+      error_message = "gitlab_gke_gateway and gitlab_enable_shell_load_balancer require gitlab_install_ingress_nginx = false: the NGINX Ingress holds the same IP on ports 22 to 443."
     }
 
     precondition {
       condition     = local.helm_chart_supports_gke_gateway
-      error_message = "gitlab_gke_gateway and gitlab_shell_load_balancer require helm_chart_version 10.3 or later, got ${var.helm_chart_version}."
+      error_message = "gitlab_gke_gateway and gitlab_enable_shell_load_balancer require helm_chart_version 10.3 or later, got ${var.helm_chart_version}."
     }
 
     precondition {
@@ -53,8 +53,8 @@ resource "terraform_data" "gateway_api_checks" {
     }
 
     precondition {
-      condition     = !local.gke_gateway_enabled || var.gitlab_gateway_certificate_enabled
-      error_message = "gitlab_gke_gateway requires gitlab_gateway_certificate_enabled = true."
+      condition     = !local.gke_gateway_enabled || var.gitlab_enable_gateway_certificate
+      error_message = "gitlab_gke_gateway requires gitlab_enable_gateway_certificate = true."
     }
 
     precondition {
@@ -78,7 +78,7 @@ locals {
 
   # Keyed by role, so the keys are known at plan time even when the domain
   # is derived from the GitLab IP.
-  gateway_certificate_hosts = var.gitlab_gateway_certificate_enabled ? merge(
+  gateway_certificate_hosts = var.gitlab_enable_gateway_certificate ? merge(
     { gitlab = local.gitlab_host },
     var.gitlab_install_kas ? { kas = local.kas_host } : {},
     var.gitlab_enable_registry ? { registry = local.registry_host } : {},
@@ -413,7 +413,7 @@ resource "kubectl_manifest" "gke_gateway_routes" {
 # GitLab Shell on its own regional L4 load balancer, sharing the GitLab IP
 # with the GKE Gateway on a different port.
 resource "kubectl_manifest" "gitlab_shell_load_balancer" {
-  count = var.gitlab_shell_load_balancer ? 1 : 0
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
 
   yaml_body = yamlencode({
     apiVersion = "v1"
