@@ -48,8 +48,8 @@ resource "terraform_data" "gateway_api_checks" {
     }
 
     precondition {
-      condition     = !local.gke_gateway_enabled || var.gitlab_proxy_only_subnet_cidr != null
-      error_message = "gitlab_gke_gateway requires gitlab_proxy_only_subnet_cidr."
+      condition     = !local.gke_gateway_enabled || var.gke_proxy_only_subnet_cidr != null
+      error_message = "gitlab_gke_gateway requires gke_proxy_only_subnet_cidr."
     }
 
     precondition {
@@ -69,7 +69,7 @@ locals {
 
   # Workhorse sees "<client>, <load balancer IP>, <proxy-only address>" in
   # X-Forwarded-For and must skip both proxies to find the client.
-  workhorse_trusted_cidrs = local.gke_gateway_enabled ? compact([var.gitlab_proxy_only_subnet_cidr, "${local.gitlab_address}/32"]) : []
+  workhorse_trusted_cidrs = local.gke_gateway_enabled ? compact([var.gke_proxy_only_subnet_cidr, "${local.gitlab_address}/32"]) : []
 
   # The hosts the chart serves, as the chart names them by default.
   gitlab_host   = "gitlab.${local.domain}"
@@ -88,10 +88,10 @@ locals {
 # Proxy-only subnet for the regional Application Load Balancer. The GKE
 # Gateway controller creates the firewall rule that admits it.
 resource "google_compute_subnetwork" "proxy_only" {
-  count = var.gitlab_proxy_only_subnet_cidr != null ? 1 : 0
+  count = var.gke_proxy_only_subnet_cidr != null ? 1 : 0
 
   name          = "gitlab-proxy-only"
-  ip_cidr_range = var.gitlab_proxy_only_subnet_cidr
+  ip_cidr_range = var.gke_proxy_only_subnet_cidr
   region        = var.region
   network       = google_compute_network.gitlab.id
   purpose       = "REGIONAL_MANAGED_PROXY"

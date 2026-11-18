@@ -50,7 +50,7 @@ module "gke_gitlab" {
   gitlab_enable_gateway_api          = true
   gitlab_gateway_api_install_envoy   = true
   gke_gateway_api_channel            = "CHANNEL_STANDARD"
-  gitlab_proxy_only_subnet_cidr      = var.proxy_only_subnet_cidr
+  gke_proxy_only_subnet_cidr         = var.proxy_only_subnet_cidr
   gitlab_gateway_certificate_enabled = true
   gitlab_shell_load_balancer         = true
 

@@ -3,13 +3,13 @@
 ## 1. Providers and inputs
 
 - [x] 1.1 Add `alekc/kubectl` to `required_providers`, raise `required_version` to `>= 1.4`, and add a `provider "kubectl"` block in `main.tf` using the same host, token and CA as `kubernetes` with `load_config_file = false`; verify `terraform init -upgrade` and `terraform validate` pass
-- [x] 1.2 Add the inputs `gke_gateway_api_channel` (validated to `null`, `CHANNEL_STANDARD`, `CHANNEL_DISABLED`), `gitlab_proxy_only_subnet_cidr`, `gitlab_gateway_certificate_enabled`, `gitlab_gke_gateway` and `gitlab_shell_load_balancer`, all defaulting to off; verify `terraform validate` passes and `CHANNEL_EXPERIMENTAL` fails validation
+- [x] 1.2 Add the inputs `gke_gateway_api_channel` (validated to `null`, `CHANNEL_STANDARD`, `CHANNEL_DISABLED`), `gke_proxy_only_subnet_cidr`, `gitlab_gateway_certificate_enabled`, `gitlab_gke_gateway` and `gitlab_shell_load_balancer`, all defaulting to off; verify `terraform validate` passes and `CHANNEL_EXPERIMENTAL` fails validation
 - [x] 1.3 Add a `terraform_data` resource with `precondition` blocks for the NGINX conflict, the GKE Gateway prerequisites and the chart 10.3 minimum; verify each invalid combination fails `terraform plan` against the example with an error naming the inputs involved
 - [x] 1.4 Pass `gke_gateway_api_channel` to `module.gke` as `gateway_api_channel`; verify the example plan sets `gateway_api_config` to `CHANNEL_STANDARD` when the input is set, and shows no change when it is `null`
 
 ## 2. Network and certificate
 
-- [x] 2.1 Create the `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`) when `gitlab_proxy_only_subnet_cidr` is set, with no module firewall rule; verify in the scratch project that the subnet is `ACTIVE` and that GKE's `gkegw1-*-l7-*` rule lists its range once the Gateway exists
+- [x] 2.1 Create the `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`) when `gke_proxy_only_subnet_cidr` is set, with no module firewall rule; verify in the scratch project that the subnet is `ACTIVE` and that GKE's `gkegw1-*-l7-*` rule lists its range once the Gateway exists
 - [x] 2.2 Build the certificate host list (`gitlab`, KAS when installed, registry when enabled) and create one regional `PER_PROJECT_RECORD` DNS authorization per host plus one regional managed certificate, when `gitlab_gateway_certificate_enabled` is true; verify the plan lists exactly the expected hosts for KAS on and registry off
 - [x] 2.3 Add the `gitlab_gateway_certificate_dns_records` output (map of host to `name`, `type`, `data`) with a description warning that records must be updated if an authorization is replaced; verify in the scratch project that creating the output records makes the certificate `ACTIVE` while DNS for the hosts points elsewhere
 - [x] 2.4 Document the new network and certificate inputs and the output in `README.md` with `make generate_docs`; verify the generated tables list them
