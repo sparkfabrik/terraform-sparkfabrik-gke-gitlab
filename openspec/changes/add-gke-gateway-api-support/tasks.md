@@ -66,6 +66,7 @@
 - [x] 8.12 Set `wait` on the Gateway, the SSH Service and the backend policies, so a delete waits for GKE to release the load balancer resources
 - [x] 8.13 Create the backend Services, their policies and the SSH Service without waiting for the Helm release, and the routes after the backend Services; verify in the dependency graph that none of them depends on `helm_release.gitlab`
 - [x] 8.14 Verify on the test deployment that turning Envoy off brings NGINX back and leaves the Envoy CRDs in place, and that removing the GKE Gateway waits for the load balancer cleanup, then repeat the cutover; verified: rollback 75 s web and 2 min 17 s SSH downtime, CRDs kept with the same UIDs, `wait` blocked about 46 s (SSH) and 60 s (Gateway), the `GatewayClass` finalizer needs a manual removal (documented); second cutover 2 min 20 s web and 2 min 46 s SSH downtime, against 7 min 8 s and about 4.5 min for the first
+- [ ] 8.15 Add `gitlab_gke_gateway.log_sample_rate`, setting `logging` on both GCPBackendPolicies when it is not `null`; verify on the test deployment that the backend services get `logConfig.enable: true` and that Cloud Armor verdicts appear in the request logs
 
 ## Workflow follow-up
 

@@ -693,13 +693,19 @@ variable "gitlab_gke_gateway" {
     cloud_armor_policy_name = optional(string)
     backend_timeout_sec     = optional(number, 3600)
     envoy_listener_mode     = optional(string, "http")
+    log_sample_rate         = optional(number)
   })
-  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. cloud_armor_policy_name is the name of an existing regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_enable_gateway_certificate, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
+  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. cloud_armor_policy_name is the name of an existing regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. log_sample_rate turns on the load balancer request logs for the Envoy backends, with the fraction of requests to log between 0 and 1 (1 logs every request, 0 turns logging off); null leaves the logging setting unmanaged. Cloud Armor verdicts appear only in these logs. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_enable_gateway_certificate, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
   default     = null
 
   validation {
     condition     = var.gitlab_gke_gateway == null || contains(["http", "external_tls_termination"], try(var.gitlab_gke_gateway.envoy_listener_mode, "http"))
     error_message = "gitlab_gke_gateway.envoy_listener_mode must be \"http\" or \"external_tls_termination\"."
+  }
+
+  validation {
+    condition     = var.gitlab_gke_gateway == null || try(var.gitlab_gke_gateway.log_sample_rate == null || (var.gitlab_gke_gateway.log_sample_rate >= 0 && var.gitlab_gke_gateway.log_sample_rate <= 1), true)
+    error_message = "gitlab_gke_gateway.log_sample_rate must be between 0 and 1."
   }
 }
 

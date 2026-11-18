@@ -327,7 +327,14 @@ resource "kubectl_manifest" "envoy_backend_policy" {
     spec = {
       default = merge(
         { timeoutSec = var.gitlab_gke_gateway.backend_timeout_sec },
-        var.gitlab_gke_gateway.cloud_armor_policy_name != null ? { securityPolicy = var.gitlab_gke_gateway.cloud_armor_policy_name } : {}
+        var.gitlab_gke_gateway.cloud_armor_policy_name != null ? { securityPolicy = var.gitlab_gke_gateway.cloud_armor_policy_name } : {},
+        # sampleRate is in millionths of the requests (1000000 logs all of them).
+        var.gitlab_gke_gateway.log_sample_rate != null ? {
+          logging = {
+            enabled    = var.gitlab_gke_gateway.log_sample_rate > 0
+            sampleRate = floor(var.gitlab_gke_gateway.log_sample_rate * 1000000)
+          }
+        } : {}
       )
       targetRef = {
         group = ""
