@@ -669,7 +669,10 @@ locals {
 
     # Ingress and NGINX
     INSTALL_INGRESS_NGINX = var.gitlab_install_ingress_nginx
-    ENABLE_INGRESS        = var.gitlab_enable_ingress
+    # An empty string keeps the chart default.
+    NGINX_REPLICAS      = var.gitlab_ingress_nginx_replicas == null ? "" : tostring(var.gitlab_ingress_nginx_replicas)
+    NGINX_MIN_AVAILABLE = var.gitlab_ingress_nginx_min_available == null ? "" : tostring(var.gitlab_ingress_nginx_min_available)
+    ENABLE_INGRESS      = var.gitlab_enable_ingress
 
     # cert-manager
     ENABLE_CERT_MANAGER = var.gitlab_enable_certmanager
@@ -682,6 +685,8 @@ locals {
     ENVOY_MODULE_CRDS                 = local.envoy_enabled
     GKE_GATEWAY                       = local.gke_gateway_enabled
     GKE_GATEWAY_EXTERNAL_TLS          = local.gke_gateway_external_tls
+    ENVOY_REPLICAS                    = local.envoy_enabled && var.gitlab_gateway_api_envoy_replicas != null ? tostring(var.gitlab_gateway_api_envoy_replicas) : ""
+    ENVOY_MIN_AVAILABLE               = local.envoy_enabled && var.gitlab_gateway_api_envoy_min_available != null ? tostring(var.gitlab_gateway_api_envoy_min_available) : ""
     SHELL_LOAD_BALANCER               = var.gitlab_enable_shell_load_balancer
     WORKHORSE_TRUSTED_CIDRS           = local.workhorse_trusted_cidrs
 
@@ -798,7 +803,7 @@ resource "time_sleep" "sleep_for_cluster_fix_helm_6361" {
 }
 
 resource "helm_release" "gitlab" {
-  name       = "gitlab"
+  name       = local.gitlab_release_name
   namespace  = var.gitlab_namespace
   repository = "https://charts.gitlab.io"
   chart      = "gitlab"
@@ -819,8 +824,8 @@ resource "helm_release" "gitlab" {
     time_sleep.sleep_for_cluster_fix_helm_6361,
     module.cloud_nat,
     module.gitlab_db_pass,
-    # The release's Envoy resources need the Envoy CRDs, and the CRDs must
-    # outlive those resources when Envoy is turned off.
+    # The release's Envoy resources need the Envoy CRDs first. The module
+    # never deletes the CRDs, see kubectl_manifest.envoy_crds.
     kubectl_manifest.envoy_crds,
   ]
 }

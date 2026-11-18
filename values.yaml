@@ -203,12 +203,11 @@ envoy-gateway:
     enabled: false
 
 %{ endif ~}
-%{ if GKE_GATEWAY ~}
-## TLS ends at the GKE regional load balancer, so every chart listener is plain
-## HTTP. The load balancer reaches Envoy through module-owned Services, so the
-## chart's Envoy Service must not create its own load balancer.
+%{ if GKE_GATEWAY || ENVOY_REPLICAS != "" || ENVOY_MIN_AVAILABLE != "" ~}
 gatewayApiResources:
-%{ if !GKE_GATEWAY_EXTERNAL_TLS ~}
+%{ if GKE_GATEWAY && !GKE_GATEWAY_EXTERNAL_TLS ~}
+  ## TLS ends at the GKE regional load balancer, so every chart listener is
+  ## plain HTTP.
   gateway:
     protocol: HTTP
 %{ endif ~}
@@ -220,7 +219,8 @@ gatewayApiResources:
       clientIPDetection:
         xForwardedFor:
           numTrustedHops: 2
-%{ else ~}
+%{ endif ~}
+%{ if GKE_GATEWAY && !GKE_GATEWAY_EXTERNAL_TLS ~}
     ## The module's webservice policy covers the whole Gateway instead (see
     ## below), so the chart's own Gateway-wide policy must not compete with it.
     clientTrafficPolicySpec: null
@@ -228,8 +228,20 @@ gatewayApiResources:
     proxySpec:
       provider:
         kubernetes:
+%{ if GKE_GATEWAY ~}
+          ## The GKE load balancer reaches Envoy through module-owned Services,
+          ## so the chart's Envoy Service must not create its own load balancer.
           envoyService:
             type: ClusterIP
+%{ endif ~}
+%{ if ENVOY_REPLICAS != "" ~}
+          envoyDeployment:
+            replicas: ${ENVOY_REPLICAS}
+%{ endif ~}
+%{ if ENVOY_MIN_AVAILABLE != "" ~}
+          envoyPDB:
+            minAvailable: ${ENVOY_MIN_AVAILABLE}
+%{ endif ~}
 
 %{ endif ~}
 ## https://docs.gitlab.com/charts/charts/nginx/
@@ -238,6 +250,12 @@ gatewayApiResources:
 nginx-ingress:
   enabled: ${INSTALL_INGRESS_NGINX}
   controller:
+%{ if NGINX_REPLICAS != "" ~}
+    replicaCount: ${NGINX_REPLICAS}
+%{ endif ~}
+%{ if NGINX_MIN_AVAILABLE != "" ~}
+    minAvailable: ${NGINX_MIN_AVAILABLE}
+%{ endif ~}
     config:
       ssl-reject-handshake: "true"
 
@@ -320,8 +338,9 @@ gitlab:
       behavior:
         ${indent(8, SHELL_HPA_BEHAVIOR)}
 %{ endif ~}
-%{ if SHELL_LOAD_BALANCER || GKE_GATEWAY ~}
-    ## GKE does not serve TCPRoute: SSH goes through its own L4 load balancer
+%{ if SHELL_LOAD_BALANCER || ENVOY_MODULE_CRDS ~}
+    ## GKE does not serve TCPRoute, so the chart's Envoy Gateway cannot route
+    ## SSH: it goes through its own L4 load balancer
     ## (gitlab_enable_shell_load_balancer), or stays inside the cluster.
     gatewayRoute:
       enabled: false

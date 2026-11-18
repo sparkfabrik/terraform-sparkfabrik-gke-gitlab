@@ -603,6 +603,28 @@ variable "gitlab_install_ingress_nginx" {
   default     = true
 }
 
+variable "gitlab_ingress_nginx_replicas" {
+  type        = number
+  description = "Number of NGINX Ingress controller replicas. It has no effect when gitlab_install_ingress_nginx is false. Leave null to keep the chart default."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_ingress_nginx_replicas == null ? true : var.gitlab_ingress_nginx_replicas >= 1 && floor(var.gitlab_ingress_nginx_replicas) == var.gitlab_ingress_nginx_replicas
+    error_message = "gitlab_ingress_nginx_replicas must be a whole number of at least 1, or null."
+  }
+}
+
+variable "gitlab_ingress_nginx_min_available" {
+  type        = number
+  description = "Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. Keep it lower than the number of replicas, or node drains are blocked. It has no effect when gitlab_install_ingress_nginx is false. Leave null to keep the chart default."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_ingress_nginx_min_available == null ? true : var.gitlab_ingress_nginx_min_available >= 1 && floor(var.gitlab_ingress_nginx_min_available) == var.gitlab_ingress_nginx_min_available
+    error_message = "gitlab_ingress_nginx_min_available must be a whole number of at least 1, or null."
+  }
+}
+
 variable "gitlab_enable_ingress" {
   type        = bool
   description = "Choose whether the GitLab chart creates its Ingress resources (global.ingress.enabled). Set it to false when GitLab is exposed through the Gateway API and no Ingress controller runs, so cert-manager does not keep renewing certificates for unused Ingresses. Default to true."
@@ -617,8 +639,30 @@ variable "gitlab_enable_gateway_api" {
 
 variable "gitlab_gateway_api_install_envoy" {
   type        = bool
-  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. The module installs the Envoy Gateway CRDs from the configured chart version and never deletes them. GKE must supply the Gateway API CRDs, so it requires gke_gateway_api_channel = CHANNEL_STANDARD and helm_chart_version 10.3 or later. GKE does not serve TCPRoute, so the chart's GitLab Shell route is disabled: expose SSH with gitlab_enable_shell_load_balancer. Default to false."
   default     = false
+}
+
+variable "gitlab_gateway_api_envoy_replicas" {
+  type        = number
+  description = "Number of Envoy proxy replicas run by the chart's Envoy Gateway. Every request through the Gateway API crosses these pods, so use at least 2 to keep serving during a node drain. It has no effect unless gitlab_enable_gateway_api and gitlab_gateway_api_install_envoy are true. Leave null to keep the Envoy Gateway default of one replica."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_gateway_api_envoy_replicas == null ? true : var.gitlab_gateway_api_envoy_replicas >= 1 && floor(var.gitlab_gateway_api_envoy_replicas) == var.gitlab_gateway_api_envoy_replicas
+    error_message = "gitlab_gateway_api_envoy_replicas must be a whole number of at least 1, or null."
+  }
+}
+
+variable "gitlab_gateway_api_envoy_min_available" {
+  type        = number
+  description = "Minimum number of Envoy proxy pods that must stay available during voluntary disruptions such as a node drain. When set, the chart's Envoy Gateway creates a PodDisruptionBudget for the Envoy proxy. It must be lower than gitlab_gateway_api_envoy_replicas, or node drains are blocked. It has no effect unless gitlab_enable_gateway_api and gitlab_gateway_api_install_envoy are true. Leave null to create no PodDisruptionBudget."
+  default     = null
+
+  validation {
+    condition     = var.gitlab_gateway_api_envoy_min_available == null ? true : var.gitlab_gateway_api_envoy_min_available >= 1 && floor(var.gitlab_gateway_api_envoy_min_available) == var.gitlab_gateway_api_envoy_min_available
+    error_message = "gitlab_gateway_api_envoy_min_available must be a whole number of at least 1, or null."
+  }
 }
 
 variable "gitlab_gateway_api_configure_certmanager" {

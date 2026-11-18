@@ -5,6 +5,12 @@
 locals {
   gke_gateway_enabled = var.gitlab_gke_gateway != null
   envoy_enabled       = var.gitlab_enable_gateway_api && var.gitlab_gateway_api_install_envoy
+  # Name of the GitLab Helm release. The Kubernetes objects below use this
+  # constant, not helm_release.gitlab.name, so that they do not wait for the
+  # release: the load balancers are then ready as soon as the pods are.
+  gitlab_release_name = "gitlab"
+  # Either Google load balancer the module can put on the GitLab IP.
+  gke_load_balancers_enabled = local.gke_gateway_enabled || var.gitlab_enable_shell_load_balancer
 
   helm_chart_version_parts = split(".", var.helm_chart_version)
   helm_chart_major         = try(tonumber(local.helm_chart_version_parts[0]), 0)
@@ -24,17 +30,17 @@ locals {
 # Cross-input checks. Variable validations cannot reference other inputs on
 # the Terraform versions this module supports, so they live here.
 resource "terraform_data" "gateway_api_checks" {
-  count = local.gke_gateway_enabled || var.gitlab_enable_shell_load_balancer ? 1 : 0
+  count = local.gke_load_balancers_enabled || local.envoy_enabled ? 1 : 0
 
   lifecycle {
     precondition {
-      condition     = !var.gitlab_install_ingress_nginx
+      condition     = !local.gke_load_balancers_enabled || !var.gitlab_install_ingress_nginx
       error_message = "gitlab_gke_gateway and gitlab_enable_shell_load_balancer require gitlab_install_ingress_nginx = false: the NGINX Ingress holds the same IP on ports 22 to 443."
     }
 
     precondition {
       condition     = local.helm_chart_supports_gke_gateway
-      error_message = "gitlab_gke_gateway and gitlab_enable_shell_load_balancer require helm_chart_version 10.3 or later, got ${var.helm_chart_version}."
+      error_message = "gitlab_gateway_api_install_envoy, gitlab_gke_gateway and gitlab_enable_shell_load_balancer require helm_chart_version 10.3 or later, got ${var.helm_chart_version}."
     }
 
     precondition {
@@ -42,9 +48,24 @@ resource "terraform_data" "gateway_api_checks" {
       error_message = "gitlab_gke_gateway.envoy_listener_mode = \"external_tls_termination\" requires helm_chart_version 10.6 or later, got ${var.helm_chart_version}."
     }
 
+    # The module installs only the Envoy Gateway CRDs: the Gateway API CRDs
+    # the chart's Envoy resources need must come from GKE.
     precondition {
-      condition     = !local.gke_gateway_enabled || var.gke_gateway_api_channel == "CHANNEL_STANDARD"
-      error_message = "gitlab_gke_gateway requires gke_gateway_api_channel = \"CHANNEL_STANDARD\"."
+      condition     = !local.envoy_enabled || var.gke_gateway_api_channel == "CHANNEL_STANDARD"
+      error_message = "gitlab_gateway_api_install_envoy requires gke_gateway_api_channel = \"CHANNEL_STANDARD\": GKE supplies the Gateway API CRDs, and the module installs only the Envoy Gateway CRDs."
+    }
+
+    # Without the GKE Gateway the chart's own Gateway keeps the GitLab IP and
+    # its SSH listener, which collides with the SSH load balancer on port 22.
+    precondition {
+      condition     = !var.gitlab_enable_shell_load_balancer || local.gke_gateway_enabled || !var.gitlab_enable_gateway_api
+      error_message = "gitlab_enable_shell_load_balancer requires gitlab_gke_gateway when gitlab_enable_gateway_api is true: the chart's own Gateway would also listen on port 22 of the GitLab IP."
+    }
+
+    # Envoy runs one replica unless gitlab_gateway_api_envoy_replicas is set.
+    precondition {
+      condition     = var.gitlab_gateway_api_envoy_min_available == null ? true : var.gitlab_gateway_api_envoy_min_available < coalesce(var.gitlab_gateway_api_envoy_replicas, 1)
+      error_message = "gitlab_gateway_api_envoy_min_available must be lower than gitlab_gateway_api_envoy_replicas, which is one replica when null: a PodDisruptionBudget that allows no eviction blocks node drains."
     }
 
     precondition {
@@ -175,7 +196,7 @@ locals {
 data "helm_template" "envoy_crds" {
   count = local.envoy_enabled ? 1 : 0
 
-  name         = "gitlab"
+  name         = local.gitlab_release_name
   namespace    = var.gitlab_namespace
   repository   = "https://charts.gitlab.io"
   chart        = "gitlab"
@@ -200,13 +221,20 @@ resource "kubectl_manifest" "envoy_crds" {
   # force takes ownership from a release that installed the CRDs earlier.
   server_side_apply = true
   force_conflicts   = true
+  # Never delete a CRD. When Envoy is turned off, Terraform destroys these
+  # instances before it updates the release, and deleting a CRD deletes every
+  # object of its kind, which breaks that update. The CRDs stay in the cluster,
+  # as with Helm. Do not use create_before_destroy to reorder the two steps:
+  # Terraform extends it to everything the CRDs depend on, such as the cluster
+  # and the database, in every deployment.
+  apply_only = true
 }
 
 # GKE Gateway in front of Envoy.
 locals {
   gke_gateway_name = "gitlab-gke"
   # Gateway created by the chart for Envoy Gateway, see gitlab.gatewayApi.gateway.name.default.
-  envoy_gateway_name = "${helm_release.gitlab.name}-gw"
+  envoy_gateway_name = "${local.gitlab_release_name}-gw"
 
   # Two Services on the same Envoy port: the chart gives every HTTP listener
   # port 80, and a Service port has a single appProtocol. The load balancer
@@ -247,6 +275,11 @@ resource "kubectl_manifest" "envoy_backend_service" {
     }
   })
   server_side_apply = true
+
+  depends_on = [
+    terraform_data.gateway_api_checks,
+    kubernetes_namespace.gitlab_namespace,
+  ]
 }
 
 resource "kubectl_manifest" "envoy_backend_health_check" {
@@ -304,6 +337,10 @@ resource "kubectl_manifest" "envoy_backend_policy" {
     }
   })
   server_side_apply = true
+  # On delete, wait until GKE has removed the load balancer resources and
+  # released the object. The subnet, the address and the Cloud Armor policy
+  # they use are deleted next.
+  wait = true
 
   depends_on = [kubectl_manifest.envoy_backend_service]
 }
@@ -345,6 +382,10 @@ resource "kubectl_manifest" "gke_gateway" {
     }
   })
   server_side_apply = true
+  # On delete, wait until GKE has removed the load balancer resources and
+  # released the object. The subnet, the address and the Cloud Armor policy
+  # they use are deleted next.
+  wait = true
 
   depends_on = [
     terraform_data.gateway_api_checks,
@@ -407,7 +448,10 @@ resource "kubectl_manifest" "gke_gateway_routes" {
   })
   server_side_apply = true
 
-  depends_on = [kubectl_manifest.gke_gateway]
+  depends_on = [
+    kubectl_manifest.gke_gateway,
+    kubectl_manifest.envoy_backend_service,
+  ]
 }
 
 # GitLab Shell on its own regional L4 load balancer, sharing the GitLab IP
@@ -431,7 +475,7 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
       loadBalancerClass = "networking.gke.io/l4-regional-external"
       selector = {
         app     = "gitlab-shell"
-        release = helm_release.gitlab.name
+        release = local.gitlab_release_name
       }
       ports = [{
         name       = "ssh"
@@ -442,6 +486,10 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
     }
   })
   server_side_apply = true
+  # On delete, wait until GKE has removed the load balancer resources and
+  # released the object. The subnet, the address and the Cloud Armor policy
+  # they use are deleted next.
+  wait = true
 
   depends_on = [
     terraform_data.gateway_api_checks,

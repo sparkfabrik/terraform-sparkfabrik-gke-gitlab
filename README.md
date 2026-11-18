@@ -80,7 +80,9 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_shell\_load\_balancer | Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab\_install\_ingress\_nginx = false. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_smtp | Setup Gitlab email address to send email. | `bool` | `false` | no |
 | gitlab\_gateway\_api\_configure\_certmanager | Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
-| gitlab\_gateway\_api\_install\_envoy | Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
+| gitlab\_gateway\_api\_envoy\_min\_available | Minimum number of Envoy proxy pods that must stay available during voluntary disruptions such as a node drain. When set, the chart's Envoy Gateway creates a PodDisruptionBudget for the Envoy proxy. It must be lower than gitlab\_gateway\_api\_envoy\_replicas, or node drains are blocked. It has no effect unless gitlab\_enable\_gateway\_api and gitlab\_gateway\_api\_install\_envoy are true. Leave null to create no PodDisruptionBudget. | `number` | `null` | no |
+| gitlab\_gateway\_api\_envoy\_replicas | Number of Envoy proxy replicas run by the chart's Envoy Gateway. Every request through the Gateway API crosses these pods, so use at least 2 to keep serving during a node drain. It has no effect unless gitlab\_enable\_gateway\_api and gitlab\_gateway\_api\_install\_envoy are true. Leave null to keep the Envoy Gateway default of one replica. | `number` | `null` | no |
+| gitlab\_gateway\_api\_install\_envoy | Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab\_enable\_gateway\_api is false. The module installs the Envoy Gateway CRDs from the configured chart version and never deletes them. GKE must supply the Gateway API CRDs, so it requires gke\_gateway\_api\_channel = CHANNEL\_STANDARD and helm\_chart\_version 10.3 or later. GKE does not serve TCPRoute, so the chart's GitLab Shell route is disabled: expose SSH with gitlab\_enable\_shell\_load\_balancer. Default to false. | `bool` | `false` | no |
 | gitlab\_gitaly\_disk\_size | Setup persistent disk size for gitaly data in GB. Default 100 GB | `number` | `100` | no |
 | gitlab\_gitaly\_max\_unavailable | For PodDisruptionBudget, how many pods can be unavailable at one time for Gitaly StatefulSet | `number` | `0` | no |
 | gitlab\_gitaly\_request\_cpu | CPU request for gitaly POD. Measurement unit needs to be specified. Default 100m. | `string` | `"100m"` | no |
@@ -106,6 +108,8 @@ Then perform the following commands on the root folder:
 | gitlab\_incoming\_imap\_user | Imap server user for Incoming Mail Imap server | `string` | `""` | no |
 | gitlab\_incoming\_mail\_address | Email Address for Incoming Mail Service | `string` | `""` | no |
 | gitlab\_incoming\_mail\_k8s\_secret | Kubernetes secret name for storing Incoming Mail account password | `string` | `"gitlab-incomingmail-secret"` | no |
+| gitlab\_ingress\_nginx\_min\_available | Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. Keep it lower than the number of replicas, or node drains are blocked. It has no effect when gitlab\_install\_ingress\_nginx is false. Leave null to keep the chart default. | `number` | `null` | no |
+| gitlab\_ingress\_nginx\_replicas | Number of NGINX Ingress controller replicas. It has no effect when gitlab\_install\_ingress\_nginx is false. Leave null to keep the chart default. | `number` | `null` | no |
 | gitlab\_install\_grafana | Choose whether to install a Grafana instance using the Gitlab chart. Default to false. | `bool` | `false` | no |
 | gitlab\_install\_ingress\_nginx | Choose whether to install the ingress nginx controller in the cluster. Default to true. | `bool` | `true` | no |
 | gitlab\_install\_kas | Choose whether to install the Gitlab agent server in the cluster. Default to false. If enabled with gitlab\_kas\_hostname variable empty, kas address will be defaulted to kas.<domain\_variable\_value> (i.e. for domain set to example.com, kas will be enabled to kas.example.com) | `bool` | `false` | no |
@@ -241,7 +245,7 @@ The [project factory](https://github.com/terraform-google-modules/terraform-goog
 
 ### Software Dependencies
 ### Terraform
-- [Terraform](https://www.terraform.io/downloads.html) 0.13.x
+- [Terraform](https://www.terraform.io/downloads.html) 1.4 or later
 - [terraform-provider-google](https://github.com/terraform-providers/terraform-provider-google) plugin v1.8.0
 
 ### Configure a Service Account
@@ -252,7 +256,7 @@ following project roles:
 ## Install
 
 ### Terraform
-Be sure you have the correct Terraform version (0.13.x), you can choose the binary here:
+Be sure you have the correct Terraform version (1.4 or later), you can choose the binary here:
 - https://releases.hashicorp.com/terraform/
 
 ## File structure
