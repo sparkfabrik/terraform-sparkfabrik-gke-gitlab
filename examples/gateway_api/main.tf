@@ -55,6 +55,6 @@ module "gke_gitlab" {
   gitlab_enable_shell_load_balancer = true
 
   gitlab_gke_gateway = {
-    security_policy = google_compute_region_security_policy.gitlab.name
+    cloud_armor_policy_name = google_compute_region_security_policy.gitlab.name
   }
 }

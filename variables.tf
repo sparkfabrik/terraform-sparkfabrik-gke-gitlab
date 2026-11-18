@@ -646,11 +646,11 @@ variable "gitlab_enable_gateway_certificate" {
 
 variable "gitlab_gke_gateway" {
   type = object({
-    security_policy     = optional(string)
-    backend_timeout_sec = optional(number, 3600)
-    envoy_listener_mode = optional(string, "http")
+    cloud_armor_policy_name = optional(string)
+    backend_timeout_sec     = optional(number, 3600)
+    envoy_listener_mode     = optional(string, "http")
   })
-  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. security_policy is the name of a regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_enable_gateway_certificate, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
+  description = "Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. cloud_armor_policy_name is the name of an existing regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend_timeout_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy_listener_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external_tls_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. Requires gke_gateway_api_channel = CHANNEL_STANDARD, gke_proxy_only_subnet_cidr, gitlab_enable_gateway_certificate, gitlab_enable_gateway_api, gitlab_gateway_api_install_envoy and gitlab_install_ingress_nginx = false. Default to null."
   default     = null
 
   validation {
