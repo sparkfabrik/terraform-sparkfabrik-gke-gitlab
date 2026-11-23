@@ -329,11 +329,13 @@ resource "kubectl_manifest" "envoy_backend_policy" {
         { timeoutSec = var.gitlab_gke_gateway.backend_timeout_sec },
         var.gitlab_gke_gateway.cloud_armor_policy_name != null ? { securityPolicy = var.gitlab_gke_gateway.cloud_armor_policy_name } : {},
         # sampleRate is in millionths of the requests (1000000 logs all of them).
+        # GKE rejects the whole policy when sampleRate is set with logging
+        # disabled, so it is left out then.
         var.gitlab_gke_gateway.log_sample_rate != null ? {
-          logging = {
-            enabled    = var.gitlab_gke_gateway.log_sample_rate > 0
-            sampleRate = floor(var.gitlab_gke_gateway.log_sample_rate * 1000000)
-          }
+          logging = merge(
+            { enabled = floor(var.gitlab_gke_gateway.log_sample_rate * 1000000) > 0 },
+            floor(var.gitlab_gke_gateway.log_sample_rate * 1000000) > 0 ? { sampleRate = floor(var.gitlab_gke_gateway.log_sample_rate * 1000000) } : {}
+          )
         } : {}
       )
       targetRef = {
