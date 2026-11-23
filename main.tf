@@ -676,7 +676,9 @@ locals {
 
     # cert-manager
     ENABLE_CERT_MANAGER = var.gitlab_enable_certmanager
-    CERT_MANAGER_EMAIL  = var.certmanager_email
+    # Null follows gitlab_enable_certmanager.
+    INGRESS_CONFIGURE_CERTMANAGER = coalesce(var.gitlab_ingress_configure_certmanager, var.gitlab_enable_certmanager)
+    CERT_MANAGER_EMAIL            = var.certmanager_email
 
     # Gateway API, see gateway.tf
     ENABLE_GATEWAY_API                = var.gitlab_enable_gateway_api

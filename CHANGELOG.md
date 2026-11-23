@@ -15,6 +15,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - `gitlab_gateway_certificate_dns_records` output listing the CNAME records the DNS zone owner must create for the certificate.
 - `gitlab_gke_gateway` variable (default `null`) exposing GitLab HTTPS through a GKE Gateway of class `gke-l7-regional-external-managed` on the GitLab IP, in front of the chart's Envoy Gateway, with an optional Cloud Armor policy, optional load balancer request logs, a backend timeout (default 3600 seconds) and an Envoy listener mode: `http` for chart 10.3 or later, or `external_tls_termination` for chart 10.6 or later.
 - `gitlab_enable_ingress` variable (default `true`) controlling `global.ingress.enabled`.
+- `gitlab_ingress_configure_certmanager` variable (default `null`) setting `global.ingress.configureCertmanager`. When `null`, it follows `gitlab_enable_certmanager`.
 - `gitlab_enable_shell_load_balancer` variable (default `false`) exposing GitLab Shell on its own regional L4 load balancer on the GitLab IP.
 - Envoy Gateway CRDs installed by the module from the configured chart version when `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` are both `true`. The module never deletes them.
 - `gitlab_gateway_api_envoy_replicas` variable (default `null`) setting the number of Envoy proxy replicas of the chart's Envoy Gateway.
@@ -29,10 +30,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - `hashicorp/helm` provider requirement from `~> 2.5` to `~> 3.3`. Update the root module constraint, convert any `provider "helm"` `kubernetes` block to an attribute, and run `terraform init -upgrade`.
 - Envoy Gateway CRDs ownership moves from the GitLab Helm release to Terraform for deployments that already set `gitlab_gateway_api_install_envoy = true`. The release sets `envoy-gateway.crds.enabled = false`.
 - `gitlab_gateway_api_install_envoy = true` now requires `gke_gateway_api_channel = "CHANNEL_STANDARD"` and `helm_chart_version` 10.3 or later, and disables the chart's GitLab Shell `TCPRoute`.
-
-### Fixed
-
-- Set `global.ingress.configureCertmanager` from `gitlab_enable_certmanager`.
+- `global.ingress.configureCertmanager` follows `gitlab_enable_certmanager` instead of always being `true`. Deployments that set `gitlab_enable_certmanager = false` and use their own cert-manager must set `gitlab_ingress_configure_certmanager = true`, or the Ingresses switch to self-signed certificates.
 
 ## [2.37.0] - 2026-11-11
 

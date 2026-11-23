@@ -189,9 +189,14 @@ The chart's Ingress resources SHALL follow a module input that defaults to enabl
 
 ### Requirement: cert-manager on Ingresses follows its input
 
-The chart's Ingress cert-manager integration SHALL follow `gitlab_enable_certmanager`.
+The chart's Ingress cert-manager integration SHALL follow `gitlab_enable_certmanager`, unless `gitlab_ingress_configure_certmanager` is set.
 
 #### Scenario: cert-manager disabled
 
-- **WHEN** the consumer sets `gitlab_enable_certmanager` to `false`
+- **WHEN** the consumer sets `gitlab_enable_certmanager` to `false` and leaves `gitlab_ingress_configure_certmanager` unset
 - **THEN** the chart does not configure cert-manager for Ingresses
+
+#### Scenario: cert-manager installed outside the chart
+
+- **WHEN** the consumer sets `gitlab_enable_certmanager` to `false` and `gitlab_ingress_configure_certmanager` to `true`
+- **THEN** the chart does not install cert-manager and still configures it for Ingresses

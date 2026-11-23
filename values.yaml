@@ -26,7 +26,7 @@ global:
   ## doc/charts/globals.md#configure-ingress-settings
   ingress:
     apiVersion: networking.k8s.io/v1
-    configureCertmanager: ${ENABLE_CERT_MANAGER}
+    configureCertmanager: ${INGRESS_CONFIGURE_CERTMANAGER}
     enabled: ${ENABLE_INGRESS}
     tls:
       enabled: true

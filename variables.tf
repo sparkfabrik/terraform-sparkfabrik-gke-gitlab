@@ -733,6 +733,12 @@ variable "gitlab_enable_certmanager" {
   default     = true
 }
 
+variable "gitlab_ingress_configure_certmanager" {
+  type        = bool
+  description = "Choose whether the chart configures cert-manager for the Ingress certificates (global.ingress.configureCertmanager). Set it to true with gitlab_enable_certmanager = false when a cert-manager installed outside the chart issues the Ingress certificates. Default to null, which follows gitlab_enable_certmanager."
+  default     = null
+}
+
 variable "gitlab_enable_smtp" {
   type        = bool
   description = "Setup Gitlab email address to send email."

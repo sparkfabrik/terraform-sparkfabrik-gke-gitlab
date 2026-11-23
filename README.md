@@ -108,6 +108,7 @@ Then perform the following commands on the root folder:
 | gitlab\_incoming\_imap\_user | Imap server user for Incoming Mail Imap server | `string` | `""` | no |
 | gitlab\_incoming\_mail\_address | Email Address for Incoming Mail Service | `string` | `""` | no |
 | gitlab\_incoming\_mail\_k8s\_secret | Kubernetes secret name for storing Incoming Mail account password | `string` | `"gitlab-incomingmail-secret"` | no |
+| gitlab\_ingress\_configure\_certmanager | Choose whether the chart configures cert-manager for the Ingress certificates (global.ingress.configureCertmanager). Set it to true with gitlab\_enable\_certmanager = false when a cert-manager installed outside the chart issues the Ingress certificates. Default to null, which follows gitlab\_enable\_certmanager. | `bool` | `null` | no |
 | gitlab\_ingress\_nginx\_min\_available | Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. Keep it lower than the number of replicas, or node drains are blocked. It has no effect when gitlab\_install\_ingress\_nginx is false. Leave null to keep the chart default. | `number` | `null` | no |
 | gitlab\_ingress\_nginx\_replicas | Number of NGINX Ingress controller replicas. It has no effect when gitlab\_install\_ingress\_nginx is false. Leave null to keep the chart default. | `number` | `null` | no |
 | gitlab\_install\_grafana | Choose whether to install a Grafana instance using the Gitlab chart. Default to false. | `bool` | `false` | no |

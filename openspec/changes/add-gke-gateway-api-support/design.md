@@ -42,6 +42,7 @@ See proposal.md for motivation. The facts below shape the approach.
 | `gitlab_ingress_nginx_replicas`, `gitlab_ingress_nginx_min_available` | `number`, `null`                                                                                                                                                                                   | Mirror the two Envoy inputs for the NGINX Ingress controller. `null` keeps the chart defaults.                                                                                            |
 | `gitlab_enable_shell_load_balancer`                                   | `bool`, `false`                                                                                                                                                                                    | Creates the SSH `LoadBalancer` Service and turns off the chart's shell `TCPRoute`.                                                                                                        |
 | `gitlab_enable_ingress`                                               | `bool`, `true`                                                                                                                                                                                     | Drives `global.ingress.enabled`. Set to `false` on the Gateway path, so the chart stops rendering Ingresses that no controller serves and cert-manager stops renewing their certificates. |
+| `gitlab_ingress_configure_certmanager`                                | `bool`, `null`                                                                                                                                                                                     | Sets `global.ingress.configureCertmanager`. `null` follows `gitlab_enable_certmanager`.                                                                                                   |
 
 New output: `gitlab_gateway_certificate_dns_records`, a map keyed by role (`gitlab`, `kas`, `registry`) with `host`, `name`, `type` and `data`.
 
@@ -103,7 +104,7 @@ Whenever the chart's Envoy Gateway is installed, with or without the GKE Gateway
 - `gitlab-shell.gatewayRoute.enabled` is `false`, because GKE does not serve `TCPRoute`.
 - `gatewayApiResources.envoy.proxySpec` sets `envoyDeployment.replicas` from `gitlab_gateway_api_envoy_replicas` and `envoyPDB.minAvailable` from `gitlab_gateway_api_envoy_min_available`, when they are set.
 
-Independently, `global.ingress.configureCertmanager` follows `gitlab_enable_certmanager`, instead of the hardcoded `true`.
+Independently, `global.ingress.configureCertmanager` follows `gitlab_enable_certmanager`, instead of the hardcoded `true`. `gitlab_ingress_configure_certmanager` overrides it: consumers whose own cert-manager issues the Ingress certificates set it to `true` with `gitlab_enable_certmanager = false` and keep the previous behavior.
 
 ### Proxy-only subnet firewall
 
