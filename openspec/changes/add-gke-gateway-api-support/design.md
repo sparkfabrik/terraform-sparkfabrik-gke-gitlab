@@ -52,7 +52,7 @@ New output: `gitlab_gateway_certificate_dns_records`, a map keyed by role (`gitl
 
 When `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` are both true:
 
-1. `data "helm_template"` renders the same `gitlab` chart at `var.helm_chart_version` with the module's values plus `envoy-gateway.crds.enabled=true` and `include_crds = true`. Values that stay unknown until apply on a new deployment (hosts, IPs and bucket names) are replaced with placeholders, so the render and the CRD keys are known at plan time. The other values stay real, because the chart's configuration checks need a consistent set.
+1. `data "helm_template"` renders the same `gitlab` chart at `var.helm_chart_version` with `envoy-gateway.crds.enabled=true`, `include_crds = true` and a fixed set of placeholder values: the fewest that pass the chart's configuration checks (Envoy enabled, external PostgreSQL and Redis, object storage, the registry storage secret and the cert-manager email). The render does not use the release values, so it is known at plan time on a new deployment and cannot be broken by a new release value. A chart version that adds a mandatory value fails the render at plan with the chart's own message.
 2. The module splits the rendered manifest into documents and keeps only `CustomResourceDefinition` objects whose `spec.group` is `gateway.envoyproxy.io`, keyed by name.
 3. `kubectl_manifest` applies each with `server_side_apply = true` and `force_conflicts = true`. Force is needed because releases that installed Envoy before this change own those CRDs through Helm.
 4. The real release sets `envoy-gateway.crds.enabled=false`, and `helm_release.gitlab` depends on the CRD resources, so the CRDs exist before the release and are upgraded before it.

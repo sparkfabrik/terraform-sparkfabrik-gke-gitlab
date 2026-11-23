@@ -158,28 +158,20 @@ resource "google_certificate_manager_certificate" "gitlab" {
 
 # Envoy Gateway CRDs, taken from the configured GitLab chart version.
 locals {
-  # The CRD render only needs values that pass the chart's configuration
-  # checks. Values that stay unknown until apply on a new deployment are
-  # replaced, so the render and the CRD keys are known at plan time.
-  envoy_crds_render_values = templatefile("${path.module}/values.yaml", merge(local.gitlab_release_helm_values_vars, {
-    DOMAIN                  = "example.com"
-    KAS_DOMAIN              = ""
-    INGRESS_IP              = "192.0.2.1"
-    DB_PRIVATE_IP           = "192.0.2.2"
-    REDIS_PRIVATE_IP        = "192.0.2.3"
-    WORKHORSE_TRUSTED_CIDRS = []
-    ARTIFACTS_BCKT          = "placeholder"
-    BACKUP_BCKT             = "placeholder"
-    DEP_PROXY_BCKT          = "placeholder"
-    EXT_DIFF_BCKT           = "placeholder"
-    LFS_BCKT                = "placeholder"
-    PACKAGES_BCKT           = "placeholder"
-    REGISTRY_BCKT           = "placeholder"
-    RUNNER_CACHE_BCKT       = "placeholder"
-    TERRAFORM_BCKT          = "placeholder"
-    BACKUP_TMP_BCKT         = "placeholder"
-    UPLOADS_BCKT            = "placeholder"
-  }))
+  # The CRD render needs no real value: these are the fewest values that pass
+  # the chart's configuration checks. They are constants, so the render and
+  # the CRD keys are known at plan time, also on a new deployment, and they do
+  # not depend on the release values.
+  envoy_crds_render_values = yamlencode({
+    global = {
+      gatewayApi = { enabled = true, installEnvoy = true }
+      psql       = { host = "192.0.2.2", password = { secret = "placeholder" } }
+      redis      = { host = "192.0.2.3" }
+      appConfig  = { object_store = { enabled = true, connection = { secret = "placeholder" } } }
+    }
+    "certmanager-issuer" = { email = "placeholder@example.com" }
+    registry             = { storage = { secret = "placeholder", key = "config" } }
+  })
 
   envoy_crd_documents = local.envoy_enabled ? flatten([
     for file in data.helm_template.envoy_crds[0].crds : [
