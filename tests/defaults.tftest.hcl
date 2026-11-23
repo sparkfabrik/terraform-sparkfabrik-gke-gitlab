@@ -81,6 +81,7 @@ run "defaults_keep_the_nginx_ingress_path" {
   assert {
     condition = (
       length(terraform_data.gateway_api_checks) == 0 &&
+      length(terraform_data.ingress_nginx_checks) == 0 &&
       length(data.helm_template.envoy_crds) == 0 &&
       length(kubectl_manifest.envoy_crds) == 0 &&
       length(kubectl_manifest.gke_gateway) == 0 &&
@@ -148,5 +149,55 @@ run "ingress_certmanager_can_be_turned_off_alone" {
   assert {
     condition     = yamldecode(helm_release.gitlab.values[0]).installCertmanager == true
     error_message = "installCertmanager must follow gitlab_enable_certmanager."
+  }
+}
+
+# NGINX Ingress controller replicas and PodDisruptionBudget
+
+run "nginx_replicas_and_min_available_follow_their_inputs" {
+  command = apply
+
+  variables {
+    gitlab_ingress_nginx_replicas      = 3
+    gitlab_ingress_nginx_min_available = 2
+  }
+
+  assert {
+    condition = (
+      yamldecode(helm_release.gitlab.values[0])["nginx-ingress"].controller.replicaCount == 3 &&
+      yamldecode(helm_release.gitlab.values[0])["nginx-ingress"].controller.minAvailable == 2
+    )
+    error_message = "The NGINX controller replicas and PodDisruptionBudget must follow their inputs."
+  }
+}
+
+run "nginx_min_available_must_be_lower_than_the_replicas" {
+  command = plan
+
+  variables {
+    gitlab_ingress_nginx_replicas      = 1
+    gitlab_ingress_nginx_min_available = 1
+  }
+
+  expect_failures = [terraform_data.ingress_nginx_checks]
+}
+
+# The chart runs two controller replicas by default.
+run "nginx_min_available_must_be_lower_than_the_default_replicas" {
+  command = plan
+
+  variables {
+    gitlab_ingress_nginx_min_available = 2
+  }
+
+  expect_failures = [terraform_data.ingress_nginx_checks]
+}
+
+run "nginx_min_available_is_not_checked_without_the_nginx_ingress" {
+  command = plan
+
+  variables {
+    gitlab_install_ingress_nginx       = false
+    gitlab_ingress_nginx_min_available = 2
   }
 }

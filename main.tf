@@ -804,6 +804,20 @@ resource "time_sleep" "sleep_for_cluster_fix_helm_6361" {
   depends_on       = [module.gke.endpoint, google_sql_database.gitlabhq_production]
 }
 
+# Cross-input check for the NGINX Ingress controller. Variable validations
+# cannot reference other inputs on the Terraform versions this module supports.
+resource "terraform_data" "ingress_nginx_checks" {
+  count = var.gitlab_install_ingress_nginx && var.gitlab_ingress_nginx_min_available != null ? 1 : 0
+
+  lifecycle {
+    # The chart runs two controller replicas unless gitlab_ingress_nginx_replicas is set.
+    precondition {
+      condition     = var.gitlab_ingress_nginx_min_available < coalesce(var.gitlab_ingress_nginx_replicas, 2)
+      error_message = "gitlab_ingress_nginx_min_available must be lower than gitlab_ingress_nginx_replicas, which is two replicas when null: a PodDisruptionBudget that allows no eviction blocks node drains."
+    }
+  }
+}
+
 resource "helm_release" "gitlab" {
   name       = local.gitlab_release_name
   namespace  = var.gitlab_namespace

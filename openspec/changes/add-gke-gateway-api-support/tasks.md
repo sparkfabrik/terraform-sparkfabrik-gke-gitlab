@@ -11,12 +11,12 @@
 
 - [x] 2.1 Create the `REGIONAL_MANAGED_PROXY` subnet (role `ACTIVE`) when `gke_proxy_only_subnet_cidr` is set, with no module firewall rule; verify in the scratch project that the subnet is `ACTIVE` and that GKE's `gkegw1-*-l7-*` rule lists its range once the Gateway exists
 - [x] 2.2 Build the certificate host list (`gitlab`, KAS when installed, registry when enabled) and create one regional `PER_PROJECT_RECORD` DNS authorization per host plus one regional managed certificate, when `gitlab_enable_gateway_certificate` is true; verify the plan lists exactly the expected hosts for KAS on and registry off
-- [x] 2.3 Add the `gitlab_gateway_certificate_dns_records` output (map of host to `name`, `type`, `data`) with a description warning that records must be updated if an authorization is replaced; verify in the scratch project that creating the output records makes the certificate `ACTIVE` while DNS for the hosts points elsewhere
+- [x] 2.3 Add the `gitlab_gateway_certificate_dns_records` output (map of host role, `gitlab`, `kas` or `registry`, to `host`, `name`, `type` and `data`) with a description warning that records must be updated if an authorization is replaced; verify in the scratch project that creating the output records makes the certificate `ACTIVE` while DNS for the hosts points elsewhere
 - [x] 2.4 Document the new network and certificate inputs and the output in `README.md` with `make generate_docs`; verify the generated tables list them
 
 ## 3. Envoy CRDs
 
-- [x] 3.1 Add `data "helm_template"` rendering the `gitlab` chart at `var.helm_chart_version` with the module's values, `envoy-gateway.crds.enabled=true` and `include_crds = true`, only when the gateway API and Envoy inputs are both true; verify the data source is absent from the default-input plan
+- [x] 3.1 Add `data "helm_template"` rendering the `gitlab` chart at `var.helm_chart_version` with a fixed set of placeholder values, `envoy-gateway.crds.enabled=true` and `include_crds = true`, only when the gateway API and Envoy inputs are both true; verify the data source is absent from the default-input plan
 - [x] 3.2 Filter the rendered documents to `CustomResourceDefinition` objects in `gateway.envoyproxy.io`, keyed by name, and apply each with `kubectl_manifest` (`server_side_apply = true`, `force_conflicts = true`); verify chart 10.4.3 yields exactly the 8 Envoy CRDs and no `gateway.networking.k8s.io` CRD
 - [x] 3.3 Set `envoy-gateway.crds.enabled=false` in `values.yaml` and add the CRD resources to `helm_release.gitlab` `depends_on`; verify in the scratch project that a first apply installs the CRDs before the release, with no GKE admission denial
 - [ ] 3.4 Verify in the scratch project that raising `helm_chart_version` to a release bundling a newer Envoy updates the CRDs in the same apply, and that disabling Envoy updates the release without errors and leaves the CRDs in place
@@ -71,6 +71,7 @@
 - [x] 8.17 Leave `sampleRate` out of the GCPBackendPolicies when `log_sample_rate` is `0`: GKE marks a policy with `sampleRate` and logging disabled as invalid and drops all its settings, including the backend timeout; verify on the test deployment that the policies are attached, the backend services have `logConfig.enable: false` and the timeout stays at `backend_timeout_sec`
 - [x] 8.18 Render the Envoy CRDs from a fixed set of placeholder values instead of the release values with placeholders; verify charts 10.3.0, 10.4.7, 10.5.6 and 10.5.7 render the same 8 Envoy CRDs, and that the test deployment plans no change on the CRD resources
 - [x] 8.19 Add `terraform test` cases with mocked providers under `tests/`: default inputs keep the NGINX path and create no Gateway resource, both listener modes render their values, the chart version gates hold at `10.2.9`/`10.3.0` and `10.5.9`/`10.6.0`, and every cross-input check and input validation rejects its invalid input; verify the tests fail when a gate, `numTrustedHops`, a check or the backend port is changed
+- [x] 8.20 Reject `gitlab_ingress_nginx_min_available` at or above `gitlab_ingress_nginx_replicas` (two replicas when null) when the NGINX Ingress is installed; verify the plan fails for 1 of 1 and for 2 with the default replicas, and passes for 2 of 3
 
 ## Workflow follow-up
 

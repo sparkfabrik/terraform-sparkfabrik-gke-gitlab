@@ -235,6 +235,10 @@ locals {
     http = { name = "gitlab-envoy-http", app_protocol = null }
     h2c  = { name = "gitlab-envoy-h2c", app_protocol = "kubernetes.io/h2c" }
   } : {}
+
+  # GCPBackendPolicy takes the sample rate in millionths of the requests
+  # (1000000 logs all of them). Null when log_sample_rate is not set.
+  gke_gateway_log_sample_rate_millionths = try(floor(var.gitlab_gke_gateway.log_sample_rate * 1000000), null)
 }
 
 resource "kubectl_manifest" "envoy_backend_service" {
@@ -320,13 +324,12 @@ resource "kubectl_manifest" "envoy_backend_policy" {
       default = merge(
         { timeoutSec = var.gitlab_gke_gateway.backend_timeout_sec },
         var.gitlab_gke_gateway.cloud_armor_policy_name != null ? { securityPolicy = var.gitlab_gke_gateway.cloud_armor_policy_name } : {},
-        # sampleRate is in millionths of the requests (1000000 logs all of them).
         # GKE rejects the whole policy when sampleRate is set with logging
         # disabled, so it is left out then.
-        var.gitlab_gke_gateway.log_sample_rate != null ? {
+        local.gke_gateway_log_sample_rate_millionths != null ? {
           logging = merge(
-            { enabled = floor(var.gitlab_gke_gateway.log_sample_rate * 1000000) > 0 },
-            floor(var.gitlab_gke_gateway.log_sample_rate * 1000000) > 0 ? { sampleRate = floor(var.gitlab_gke_gateway.log_sample_rate * 1000000) } : {}
+            { enabled = local.gke_gateway_log_sample_rate_millionths > 0 },
+            local.gke_gateway_log_sample_rate_millionths > 0 ? { sampleRate = local.gke_gateway_log_sample_rate_millionths } : {}
           )
         } : {}
       )

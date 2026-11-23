@@ -616,7 +616,7 @@ variable "gitlab_ingress_nginx_replicas" {
 
 variable "gitlab_ingress_nginx_min_available" {
   type        = number
-  description = "Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. Keep it lower than the number of replicas, or node drains are blocked. It has no effect when gitlab_install_ingress_nginx is false. Leave null to keep the chart default."
+  description = "Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. It must be lower than gitlab_ingress_nginx_replicas, which is two replicas when null, or node drains are blocked. It has no effect when gitlab_install_ingress_nginx is false. Leave null to keep the chart default."
   default     = null
 
   validation {
