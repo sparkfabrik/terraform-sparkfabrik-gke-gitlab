@@ -1,0 +1,30 @@
+name: Test
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        name: Checkout source code
+
+      - uses: hashicorp/setup-terraform@v4
+        name: Setup Terraform
+        with:
+          # The tests use mocked providers, which need Terraform 1.7 or later.
+          terraform_version: 1.10.2
+
+      - name: Init Terraform
+        run: terraform init -backend=false -input=false
+
+      # The providers are mocked: the tests create nothing and need no credentials.
+      - name: Run the tests
+        run: terraform test

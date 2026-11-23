@@ -69,19 +69,25 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_certmanager | Choose whether to Install certmanager through Gitlab Helm Chart. Default to true. | `bool` | `true` | no |
 | gitlab\_enable\_cron\_backup | Choose whether to enable Gitlab Scheduled Backups. Default to true. | `bool` | `true` | no |
 | gitlab\_enable\_gateway\_api | Choose whether to expose GitLab through the Gateway API instead of the NGINX Ingress. Helm chart 10.0 and later enable it by default, so it stays disabled here to keep the NGINX Ingress. Default to false. | `bool` | `false` | no |
+| gitlab\_enable\_gateway\_certificate | Choose whether to create the regional Certificate Manager certificates used by the GKE Gateway: one certificate and one DNS authorization per GitLab host. Create the records in the gitlab\_gateway\_certificate\_dns\_records output so the certificates become active. It can be enabled while the NGINX Ingress still serves traffic. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_incoming\_mail | Enable Gitlab Incoming Mail Service | `bool` | `false` | no |
+| gitlab\_enable\_ingress | Choose whether the GitLab chart creates its Ingress resources (global.ingress.enabled). Set it to false when GitLab is exposed through the Gateway API and no Ingress controller runs, so cert-manager does not keep renewing certificates for unused Ingresses. Default to true. | `bool` | `true` | no |
 | gitlab\_enable\_omniauth | Choose whether to enable Gitlab Omniauth integration. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_registry | Choose whether to enable Gitlab Container registry. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_restore\_pv | Enable additional storage for TAR Restoration creation of any appreciable size | `bool` | `false` | no |
 | gitlab\_enable\_service\_desk | Enable Gitlab Service Desk | `bool` | `false` | no |
 | gitlab\_enable\_service\_ping | Enable Gitlab Service Ping | `bool` | `true` | no |
+| gitlab\_enable\_shell\_load\_balancer | Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab\_install\_ingress\_nginx = false. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_smtp | Setup Gitlab email address to send email. | `bool` | `false` | no |
 | gitlab\_gateway\_api\_configure\_certmanager | Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
-| gitlab\_gateway\_api\_install\_envoy | Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
+| gitlab\_gateway\_api\_envoy\_min\_available | Minimum number of Envoy proxy pods that must stay available during voluntary disruptions such as a node drain. When set, the chart's Envoy Gateway creates a PodDisruptionBudget for the Envoy proxy. It must be lower than gitlab\_gateway\_api\_envoy\_replicas, or node drains are blocked. It has no effect unless gitlab\_enable\_gateway\_api and gitlab\_gateway\_api\_install\_envoy are true. Leave null to create no PodDisruptionBudget. | `number` | `null` | no |
+| gitlab\_gateway\_api\_envoy\_replicas | Number of Envoy proxy replicas run by the chart's Envoy Gateway. Every request through the Gateway API crosses these pods, so use at least 2 to keep serving during a node drain. It has no effect unless gitlab\_enable\_gateway\_api and gitlab\_gateway\_api\_install\_envoy are true. Leave null to keep the Envoy Gateway default of one replica. | `number` | `null` | no |
+| gitlab\_gateway\_api\_install\_envoy | Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab\_enable\_gateway\_api is false. The module installs the Envoy Gateway CRDs from the configured chart version and never deletes them. GKE must supply the Gateway API CRDs, so it requires gke\_gateway\_api\_channel = CHANNEL\_STANDARD and helm\_chart\_version 10.3 or later. GKE does not serve TCPRoute, so the chart's GitLab Shell route is disabled: expose SSH with gitlab\_enable\_shell\_load\_balancer. Default to false. | `bool` | `false` | no |
 | gitlab\_gitaly\_disk\_size | Setup persistent disk size for gitaly data in GB. Default 100 GB | `number` | `100` | no |
 | gitlab\_gitaly\_max\_unavailable | For PodDisruptionBudget, how many pods can be unavailable at one time for Gitaly StatefulSet | `number` | `0` | no |
 | gitlab\_gitaly\_request\_cpu | CPU request for gitaly POD. Measurement unit needs to be specified. Default 100m. | `string` | `"100m"` | no |
 | gitlab\_gitaly\_request\_mem | Memory request for gitaly POD. Measurement unit needs to be specified. Default 200Mi. | `string` | `"200Mi"` | no |
+| gitlab\_gke\_gateway | Expose GitLab HTTPS through a GKE Gateway of class gke-l7-regional-external-managed on the GitLab IP, in front of the chart's Envoy Gateway. cloud\_armor\_policy\_name is the name of an existing regional Cloud Armor policy in the same project and region, attached to the Envoy backend. backend\_timeout\_sec is the load balancer backend timeout: the total time allowed for an HTTP response and the maximum lifetime of a WebSocket connection. envoy\_listener\_mode sets how the chart's Envoy listeners serve the plain HTTP traffic from the load balancer: http (chart 10.3 or later) makes them HTTP on port 80 and replaces the chart's ClientTrafficPolicies with one Gateway-wide policy; external\_tls\_termination (chart 10.6 or later) uses the chart's global.gatewayApi.externalTlsTermination. log\_sample\_rate turns on the load balancer request logs for the Envoy backends, with the fraction of requests to log between 0 and 1 (1 logs every request, 0 turns logging off); null leaves the logging setting unmanaged. Cloud Armor verdicts appear only in these logs. Requires gke\_gateway\_api\_channel = CHANNEL\_STANDARD, gke\_proxy\_only\_subnet\_cidr, gitlab\_enable\_gateway\_certificate, gitlab\_enable\_gateway\_api, gitlab\_gateway\_api\_install\_envoy and gitlab\_install\_ingress\_nginx = false. Default to null. | <pre>object({<br>    cloud_armor_policy_name = optional(string)<br>    backend_timeout_sec     = optional(number, 3600)<br>    envoy_listener_mode     = optional(string, "http")<br>    log_sample_rate         = optional(number)<br>  })</pre> | `null` | no |
 | gitlab\_hpa\_behavior\_kas | Scaling behavior of the Gitlab Kas HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
 | gitlab\_hpa\_behavior\_registry | Scaling behavior of the Gitlab Registry HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
 | gitlab\_hpa\_behavior\_shell | Scaling behavior of the Gitlab Shell HPA, written as the Kubernetes behavior block (scaleUp and scaleDown with stabilizationWindowSeconds and policies). It is merged over the chart default. Leave null to keep the chart default. | `any` | `null` | no |
@@ -102,6 +108,9 @@ Then perform the following commands on the root folder:
 | gitlab\_incoming\_imap\_user | Imap server user for Incoming Mail Imap server | `string` | `""` | no |
 | gitlab\_incoming\_mail\_address | Email Address for Incoming Mail Service | `string` | `""` | no |
 | gitlab\_incoming\_mail\_k8s\_secret | Kubernetes secret name for storing Incoming Mail account password | `string` | `"gitlab-incomingmail-secret"` | no |
+| gitlab\_ingress\_configure\_certmanager | Choose whether the chart configures cert-manager for the Ingress certificates (global.ingress.configureCertmanager). Set it to true with gitlab\_enable\_certmanager = false when a cert-manager installed outside the chart issues the Ingress certificates. Default to null, which follows gitlab\_enable\_certmanager. | `bool` | `null` | no |
+| gitlab\_ingress\_nginx\_min\_available | Minimum number of NGINX Ingress controller pods that must stay available during voluntary disruptions such as a node drain, set on the controller PodDisruptionBudget. It must be lower than gitlab\_ingress\_nginx\_replicas, which is two replicas when null, or node drains are blocked. It has no effect when gitlab\_install\_ingress\_nginx is false. Leave null to keep the chart default. | `number` | `null` | no |
+| gitlab\_ingress\_nginx\_replicas | Number of NGINX Ingress controller replicas. It has no effect when gitlab\_install\_ingress\_nginx is false. Leave null to keep the chart default. | `number` | `null` | no |
 | gitlab\_install\_grafana | Choose whether to install a Grafana instance using the Gitlab chart. Default to false. | `bool` | `false` | no |
 | gitlab\_install\_ingress\_nginx | Choose whether to install the ingress nginx controller in the cluster. Default to true. | `bool` | `true` | no |
 | gitlab\_install\_kas | Choose whether to install the Gitlab agent server in the cluster. Default to false. If enabled with gitlab\_kas\_hostname variable empty, kas address will be defaulted to kas.<domain\_variable\_value> (i.e. for domain set to example.com, kas will be enabled to kas.example.com) | `bool` | `false` | no |
@@ -152,6 +161,7 @@ Then perform the following commands on the root folder:
 | gke\_enable\_istio\_addon | Enable Istio addon | `bool` | `false` | no |
 | gke\_enable\_pod\_security\_policy | Enable Pod Security Policy for the cluster. Default false | `bool` | `false` | no |
 | gke\_enable\_private\_nodes | Whether nodes have internal IP addresses only (private nodes) at the cluster level. When true, the cluster defaults to private nodes; individual node pools can still opt out via `gke_node_pool_enable_private_nodes` or the `enable_private_nodes` key in `gke_additional_node_pools`. Set to false to give nodes ephemeral (public) external IPs by default. | `bool` | `true` | no |
+| gke\_gateway\_api\_channel | Gateway API channel of the GKE cluster: CHANNEL\_STANDARD installs the standard Gateway API CRDs and enables the GKE Gateway controller, CHANNEL\_DISABLED disables it. GKE does not support the experimental channel. Default to null, which leaves the cluster setting unchanged. | `string` | `null` | no |
 | gke\_gce\_pd\_csi\_driver | Enable GCE Persistent Disk CSI Driver for GKE Cluster. Default true | `bool` | `true` | no |
 | gke\_gitaly\_pv\_labels | The GITALY Persistent Volume labels (a map of key/value pairs comma separeted) to match against when choosing a volume to bind. This is used in the PersistentVolumeClaim selector section | `map(string)` | `{}` | no |
 | gke\_google\_group\_rbac\_mail | The name of the RBAC security group for use with Google security groups in Kubernetes RBAC. Group name must be in format gke-security-groups@yourdomain.com | `string` | `"null"` | no |
@@ -166,7 +176,7 @@ Then perform the following commands on the root folder:
 | gke\_max\_node\_count | Define the maximum number of nodes of the autoscaling cluster. Default 5 | `number` | `5` | no |
 | gke\_min\_node\_count | Define the minimum number of nodes of the autoscaling cluster. Default 1 | `number` | `1` | no |
 | gke\_monitoring\_enable\_managed\_prometheus | Whether Google Managed Service for Prometheus managed collection is enabled on the cluster. | `bool` | `false` | no |
-| gke\_monitoring\_enabled\_components | Monitoring components to enable when managed collection is on. Defaults to SYSTEM\_COMPONENTS so enabling managed Prometheus does not disable GKE system metrics. Only applied when gke\_monitoring\_enable\_managed\_prometheus is true. | `list(string)` | <pre>[<br/>  "SYSTEM\_COMPONENTS"<br/>]</pre> | no |
+| gke\_monitoring\_enabled\_components | Monitoring components to enable when managed collection is on. Defaults to SYSTEM\_COMPONENTS so enabling managed Prometheus does not disable GKE system metrics. Only applied when gke\_monitoring\_enable\_managed\_prometheus is true. | `list(string)` | <pre>[<br>  "SYSTEM_COMPONENTS"<br>]</pre> | no |
 | gke\_node\_count | Define the number of nodes of the cluster. Default 1 | `number` | `1` | no |
 | gke\_node\_pool\_description | Description of the node pool for the GitLab cluster | `string` | `"Gitlab Cluster"` | no |
 | gke\_node\_pool\_enable\_private\_nodes | Override `enable_private_nodes` for the default GitLab node pool. When null the pool inherits the cluster-level `gke_enable_private_nodes`. Set to false to give this pool ephemeral (public) external IPs, or true to force private nodes. | `bool` | `null` | no |
@@ -176,6 +186,7 @@ Then perform the following commands on the root folder:
 | gke\_nodes\_subnet\_cidr | Cidr range to use for gitlab GKE nodes subnet | `string` | `"10.10.0.0/16"` | no |
 | gke\_pods\_subnet\_cidr | Cidr range to use for gitlab GKE pods subnet | `string` | `"10.30.0.0/16"` | no |
 | gke\_preemptible | Enable preemptible nodes for the cluster. Default false | `bool` | `false` | no |
+| gke\_proxy\_only\_subnet\_cidr | CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it. Default to null. | `string` | `null` | no |
 | gke\_sc\_gitlab\_backup\_disk | Storage class for Perstistent Volume used for extra space in Backup Cron Job . Default pd-sdd. | `string` | `"standard"` | no |
 | gke\_sc\_gitlab\_restore\_disk | Storage class for Perstistent Volume used for extra space in Backup Restore Job. Default pd-sdd. | `string` | `"standard"` | no |
 | gke\_services\_subnet\_cidr | Cidr range to use for gitlab GKE services subnet | `string` | `"10.20.0.0/16"` | no |
@@ -213,6 +224,7 @@ Then perform the following commands on the root folder:
 | created\_bucket\_names | The list of the created buckets. |
 | gitlab\_address | IP address where you can connect to your GitLab instance |
 | gitlab\_database\_name | The name of the Cloud SQL database instance used by GitLab. |
+| gitlab\_gateway\_certificate\_dns\_records | DNS records, keyed by host role (gitlab, kas, registry), that the DNS zone owner must create so the GKE Gateway certificate becomes active and keeps renewing. If a DNS authorization is ever replaced, its record changes and must be updated in the zone. |
 | gitlab\_namespace | The namespace where Gitlab is installed. |
 | gitlab\_network\_selflink | The self link of the network used by the GKE cluster. |
 | gitlab\_subnet\_selflink | The self link of the subnet used by the GKE cluster. |
@@ -234,7 +246,7 @@ The [project factory](https://github.com/terraform-google-modules/terraform-goog
 
 ### Software Dependencies
 ### Terraform
-- [Terraform](https://www.terraform.io/downloads.html) 0.13.x
+- [Terraform](https://www.terraform.io/downloads.html) 1.4 or later
 - [terraform-provider-google](https://github.com/terraform-providers/terraform-provider-google) plugin v1.8.0
 
 ### Configure a Service Account
@@ -245,7 +257,7 @@ following project roles:
 ## Install
 
 ### Terraform
-Be sure you have the correct Terraform version (0.13.x), you can choose the binary here:
+Be sure you have the correct Terraform version (1.4 or later), you can choose the binary here:
 - https://releases.hashicorp.com/terraform/
 
 ## File structure
