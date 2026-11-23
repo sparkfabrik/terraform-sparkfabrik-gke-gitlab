@@ -27,7 +27,7 @@ make docker_generate_docs
 
 ## Unit Testing
 
-The tests in `tests/` run the module with mocked providers. They create nothing and need no credentials. They cover the rendered Helm values, the Gateway objects, the chart version gates and the input checks. They require Terraform 1.7 or later:
+The tests in `tests/` run the module with mocked providers. They create nothing and need no credentials. They cover the rendered Helm values, the Gateway objects, the chart version gates and the input checks. The `Test` workflow runs them on every pull request. To run them locally, use Terraform 1.7 or later:
 
 ```
 terraform init
