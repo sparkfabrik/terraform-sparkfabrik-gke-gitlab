@@ -69,7 +69,8 @@
 - [x] 8.15 Add `gitlab_gke_gateway.log_sample_rate`, setting `logging` on both GCPBackendPolicies when it is not `null`; verify on the test deployment that the backend services get `logConfig.enable: true` and that Cloud Armor verdicts appear in the request logs
 - [x] 8.16 Add `gitlab_ingress_configure_certmanager` (default `null`, following `gitlab_enable_certmanager`), so that consumers with their own cert-manager keep `global.ingress.configureCertmanager` true; verify the three input combinations render the expected value
 - [x] 8.17 Leave `sampleRate` out of the GCPBackendPolicies when `log_sample_rate` is `0`: GKE marks a policy with `sampleRate` and logging disabled as invalid and drops all its settings, including the backend timeout; verify on the test deployment that the policies are attached, the backend services have `logConfig.enable: false` and the timeout stays at `backend_timeout_sec`
-- [ ] 8.18 Render the Envoy CRDs from a fixed set of placeholder values instead of the release values with placeholders; verify charts 10.3.0, 10.4.7, 10.5.6 and 10.5.7 render the same 8 Envoy CRDs, and that the test deployment plans no change on the CRD resources
+- [x] 8.18 Render the Envoy CRDs from a fixed set of placeholder values instead of the release values with placeholders; verify charts 10.3.0, 10.4.7, 10.5.6 and 10.5.7 render the same 8 Envoy CRDs, and that the test deployment plans no change on the CRD resources
+- [x] 8.19 Add `terraform test` cases with mocked providers under `tests/`: default inputs keep the NGINX path and create no Gateway resource, both listener modes render their values, the chart version gates hold at `10.2.9`/`10.3.0` and `10.5.9`/`10.6.0`, and every cross-input check and input validation rejects its invalid input; verify the tests fail when a gate, `numTrustedHops`, a check or the backend port is changed
 
 ## Workflow follow-up
 

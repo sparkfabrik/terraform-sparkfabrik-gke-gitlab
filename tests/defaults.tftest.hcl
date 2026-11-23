@@ -1,0 +1,152 @@
+# Runs with mocked providers, so it creates nothing and needs no credentials.
+# Requires Terraform 1.7 or later: `terraform init && terraform test`.
+
+mock_provider "google" {
+  source = "./tests/mocks/google"
+}
+mock_provider "google-beta" {}
+mock_provider "helm" {}
+mock_provider "kubernetes" {}
+mock_provider "kubectl" {}
+mock_provider "random" {}
+# Mocked so that time_sleep does not wait.
+mock_provider "time" {}
+
+# The GKE module reads zones and versions from data sources that a mock leaves
+# empty. The tests only need its outputs.
+override_module {
+  target = module.gke
+  outputs = {
+    endpoint        = "192.0.2.10"
+    ca_certificate  = "dGVzdA=="
+    location        = "europe-west1"
+    name            = "gitlab"
+    service_account = "gitlab@test-project.iam.gserviceaccount.com"
+  }
+}
+
+variables {
+  project_id        = "test-project"
+  certmanager_email = "test@example.com"
+  domain            = "example.com"
+  gitlab_log_level  = "info"
+}
+
+# Default inputs keep the NGINX Ingress path and create no Gateway resource.
+run "defaults_keep_the_nginx_ingress_path" {
+  command = apply
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.enabled == true
+    error_message = "global.ingress.enabled must be true by default."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.configureCertmanager == true
+    error_message = "global.ingress.configureCertmanager must be true by default."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).installCertmanager == true
+    error_message = "installCertmanager must be true by default."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0])["nginx-ingress"].enabled == true
+    error_message = "nginx-ingress must be enabled by default."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.gatewayApi.enabled == false
+    error_message = "global.gatewayApi.enabled must be false by default."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.hosts.externalIP == google_compute_address.gitlab[0].address
+    error_message = "global.hosts.externalIP must be the GitLab IP by default."
+  }
+
+  assert {
+    condition = alltrue([
+      for key in ["gatewayApiResources", "envoy-gateway"] : !contains(keys(yamldecode(helm_release.gitlab.values[0])), key)
+    ])
+    error_message = "Default inputs must not render gatewayApiResources or envoy-gateway."
+  }
+
+  assert {
+    condition     = !contains(keys(yamldecode(helm_release.gitlab.values[0]).gitlab["gitlab-shell"]), "gatewayRoute")
+    error_message = "Default inputs must not override the GitLab Shell gateway route."
+  }
+
+  assert {
+    condition = (
+      length(terraform_data.gateway_api_checks) == 0 &&
+      length(data.helm_template.envoy_crds) == 0 &&
+      length(kubectl_manifest.envoy_crds) == 0 &&
+      length(kubectl_manifest.gke_gateway) == 0 &&
+      length(kubectl_manifest.gke_gateway_routes) == 0 &&
+      length(kubectl_manifest.envoy_backend_service) == 0 &&
+      length(kubectl_manifest.envoy_backend_policy) == 0 &&
+      length(kubectl_manifest.gitlab_shell_load_balancer) == 0 &&
+      length(google_compute_subnetwork.proxy_only) == 0 &&
+      length(google_certificate_manager_certificate.gitlab) == 0
+    )
+    error_message = "Default inputs must not create any Gateway resource."
+  }
+}
+
+run "ingress_certmanager_follows_gitlab_enable_certmanager" {
+  command = apply
+
+  variables {
+    gitlab_enable_certmanager = false
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.configureCertmanager == false
+    error_message = "global.ingress.configureCertmanager must follow gitlab_enable_certmanager."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).installCertmanager == false
+    error_message = "installCertmanager must follow gitlab_enable_certmanager."
+  }
+}
+
+# A cert-manager installed outside the chart keeps issuing the Ingress certificates.
+run "ingress_certmanager_can_stay_on_without_the_chart_certmanager" {
+  command = apply
+
+  variables {
+    gitlab_enable_certmanager            = false
+    gitlab_ingress_configure_certmanager = true
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.configureCertmanager == true
+    error_message = "gitlab_ingress_configure_certmanager = true must set global.ingress.configureCertmanager."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).installCertmanager == false
+    error_message = "installCertmanager must follow gitlab_enable_certmanager."
+  }
+}
+
+run "ingress_certmanager_can_be_turned_off_alone" {
+  command = apply
+
+  variables {
+    gitlab_ingress_configure_certmanager = false
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.configureCertmanager == false
+    error_message = "gitlab_ingress_configure_certmanager = false must clear global.ingress.configureCertmanager."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).installCertmanager == true
+    error_message = "installCertmanager must follow gitlab_enable_certmanager."
+  }
+}
