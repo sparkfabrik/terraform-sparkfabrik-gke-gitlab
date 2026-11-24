@@ -518,9 +518,9 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
     }
   })
   server_side_apply = true
-  # An upgrade from the LoadBalancer Service of release 3.0.0 replaces the
-  # object: wait until GKE has removed its load balancer and released port 22
-  # of the GitLab IP.
+  # A deployment that still has the earlier LoadBalancer Service at this
+  # address replaces it: wait until GKE has removed its load balancer and
+  # released port 22 of the GitLab IP.
   wait = true
 
   depends_on = [

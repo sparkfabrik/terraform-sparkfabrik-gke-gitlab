@@ -5,33 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
-
-### Added
-
-- `gitlab_shell_load_balancer_idle_timeout_sec` variable (default `3600`) setting the idle timeout of the GitLab Shell load balancer.
-
-### Changed
-
-- `gitlab_enable_shell_load_balancer` creates a regional external proxy Network Load Balancer on port 22 of the GitLab IP instead of a `LoadBalancer` Service. The `gitlab-shell-lb` Service is replaced by the `gitlab-shell-neg` ClusterIP Service.
-- `gitlab_enable_shell_load_balancer = true` now requires `gke_proxy_only_subnet_cidr`.
-
-### Fixed
-
-- Pods in the GitLab cluster could not reach ports 443 and 80 of the GitLab IP when `gitlab_enable_shell_load_balancer` was `true`.
-
 ## [3.0.0] - 2026-11-23
 
 ### Added
 
 - `gke_gateway_api_channel` variable (default `null`) setting the GKE Gateway API channel to `CHANNEL_STANDARD` or `CHANNEL_DISABLED`.
-- `gke_proxy_only_subnet_cidr` variable (default `null`) creating the regional proxy-only subnet used by the GKE Gateway load balancer.
+- `gke_proxy_only_subnet_cidr` variable (default `null`) creating the regional proxy-only subnet used by the GKE Gateway and GitLab Shell load balancers.
 - `gitlab_enable_gateway_certificate` variable (default `false`) enabling the Certificate Manager API and creating one regional certificate and one DNS authorization for each of the GitLab, KAS and registry hosts.
 - `gitlab_gateway_certificate_dns_records` output listing the CNAME records the DNS zone owner must create for the certificate.
 - `gitlab_gke_gateway` variable (default `null`) exposing GitLab HTTPS through a GKE Gateway of class `gke-l7-regional-external-managed` on the GitLab IP, in front of the chart's Envoy Gateway, with an optional Cloud Armor policy, optional load balancer request logs, a backend timeout (default 3600 seconds) and an Envoy listener mode: `http` for chart 10.3 or later, or `external_tls_termination` for chart 10.6 or later.
 - `gitlab_enable_ingress` variable (default `true`) controlling `global.ingress.enabled`.
 - `gitlab_ingress_configure_certmanager` variable (default `null`) setting `global.ingress.configureCertmanager`. When `null`, it follows `gitlab_enable_certmanager`.
-- `gitlab_enable_shell_load_balancer` variable (default `false`) exposing GitLab Shell on its own regional L4 load balancer on the GitLab IP.
+- `gitlab_enable_shell_load_balancer` variable (default `false`) exposing GitLab Shell on port 22 of the GitLab IP through its own regional external proxy Network Load Balancer. It requires `gke_proxy_only_subnet_cidr`.
+- `gitlab_shell_load_balancer_idle_timeout_sec` variable (default `3600`) setting the idle timeout of the GitLab Shell load balancer.
 - Envoy Gateway CRDs installed by the module from the configured chart version when `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` are both `true`. The module never deletes them.
 - `gitlab_gateway_api_envoy_replicas` variable (default `null`) setting the number of Envoy proxy replicas of the chart's Envoy Gateway.
 - `gitlab_gateway_api_envoy_min_available` variable (default `null`) creating a PodDisruptionBudget for the Envoy proxy.

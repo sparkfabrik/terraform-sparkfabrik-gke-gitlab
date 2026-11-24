@@ -112,7 +112,7 @@ The module creates no firewall rule. When the first Gateway exists, the GKE Gate
 
 ### SSH load balancer
 
-Release 3.0.0 exposed SSH with a `LoadBalancer` Service on the GitLab IP. With that Service in place, pods in the GitLab cluster got a refused connection on ports 443 and 80 of the GitLab IP, while port 22 worked. Deleting the Service restored them. CI jobs run in the cluster and use the public host, so no Service may hold the GitLab IP.
+The first implementation exposed SSH with a `LoadBalancer` Service on the GitLab IP. With that Service in place, pods in the GitLab cluster got a refused connection on ports 443 and 80 of the GitLab IP, while port 22 worked. Deleting the Service restored them. CI jobs run in the cluster and use the public host, so no Service may hold the GitLab IP.
 
 Terraform creates a regional external proxy Network Load Balancer instead: a forwarding rule on TCP 22 of the GitLab address, a target TCP proxy, a regional backend service and a TCP health check. It uses the proxy-only subnet of the Gateway.
 
