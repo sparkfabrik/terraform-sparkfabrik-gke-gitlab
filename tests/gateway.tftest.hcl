@@ -263,6 +263,25 @@ run "shell_load_balancer_idle_timeout_follows_its_input" {
   }
 }
 
+run "shell_load_balancer_firewall_admits_additional_node_pools" {
+  command = apply
+
+  variables {
+    gke_additional_node_pools = [
+      { name = "runners", service_account = "runners@test-project.iam.gserviceaccount.com" },
+      { name = "batch" },
+    ]
+  }
+
+  assert {
+    condition = google_compute_firewall.gitlab_shell_load_balancer[0].target_service_accounts == toset([
+      "gitlab@test-project.iam.gserviceaccount.com",
+      "runners@test-project.iam.gserviceaccount.com",
+    ])
+    error_message = "The firewall rule must admit the nodes of additional pools that set their own service account."
+  }
+}
+
 # Without the annotation the backend service would have no backend.
 run "shell_load_balancer_waits_for_the_network_endpoint_groups" {
   command = plan

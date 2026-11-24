@@ -474,6 +474,13 @@ locals {
   shell_neg_name         = "gitlab-shell"
   shell_container_port   = 2222
 
+  # Service accounts of every node that can run GitLab Shell: the cluster one,
+  # also used by auto-provisioned pools, and those set on additional pools.
+  shell_node_service_accounts = compact(distinct(concat(
+    [module.gke.service_account],
+    [for pool in var.gke_additional_node_pools : lookup(pool, "service_account", "")],
+  )))
+
   # GKE writes the zones of the network endpoint groups on the Service.
   shell_neg_status = try(jsondecode(data.kubernetes_resource.gitlab_shell_neg[0].object.metadata.annotations["cloud.google.com/neg-status"]), {})
   shell_neg_zones  = toset(try(local.shell_neg_status.zones, []))
@@ -639,7 +646,7 @@ resource "google_compute_firewall" "gitlab_shell_load_balancer" {
   direction     = "INGRESS"
   source_ranges = compact([var.gke_proxy_only_subnet_cidr, "35.191.0.0/16", "130.211.0.0/22"])
 
-  target_service_accounts = [module.gke.service_account]
+  target_service_accounts = local.shell_node_service_accounts
 
   allow {
     protocol = "tcp"
