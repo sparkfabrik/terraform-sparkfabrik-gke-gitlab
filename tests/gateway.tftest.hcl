@@ -213,9 +213,10 @@ run "shell_load_balancer_is_a_proxy_load_balancer_on_the_gitlab_ip" {
       google_compute_forwarding_rule.gitlab_shell[0].load_balancing_scheme == "EXTERNAL_MANAGED" &&
       google_compute_forwarding_rule.gitlab_shell[0].ip_protocol == "TCP" &&
       google_compute_forwarding_rule.gitlab_shell[0].port_range == "22" &&
-      google_compute_forwarding_rule.gitlab_shell[0].ip_address == google_compute_address.gitlab[0].address
+      google_compute_forwarding_rule.gitlab_shell[0].ip_address == google_compute_address.gitlab[0].address &&
+      google_compute_forwarding_rule.gitlab_shell[0].network_tier == google_compute_address.gitlab[0].network_tier
     )
-    error_message = "The forwarding rule must serve TCP port 22 of the GitLab IP as a proxy load balancer."
+    error_message = "The forwarding rule must serve TCP port 22 of the GitLab IP, in its network tier, as a proxy load balancer."
   }
 
   assert {
@@ -282,7 +283,10 @@ run "shell_load_balancer_firewall_admits_additional_node_pools" {
   }
 }
 
-# Without the annotation the backend service would have no backend.
+# Without the annotation the backend service would have no backend. The
+# earlier runs left the Service in the state, so the annotation is read at
+# plan time: this is the case of a plan after the first apply. The first apply
+# is in shell_load_balancer_first_apply.tftest.hcl.
 run "shell_load_balancer_waits_for_the_network_endpoint_groups" {
   command = plan
 
@@ -562,6 +566,16 @@ run "shell_load_balancer_idle_timeout_must_be_positive" {
 
   variables {
     gitlab_shell_load_balancer_idle_timeout_sec = 0
+  }
+
+  expect_failures = [var.gitlab_shell_load_balancer_idle_timeout_sec]
+}
+
+run "shell_load_balancer_idle_timeout_must_be_a_whole_number" {
+  command = plan
+
+  variables {
+    gitlab_shell_load_balancer_idle_timeout_sec = 1.5
   }
 
   expect_failures = [var.gitlab_shell_load_balancer_idle_timeout_sec]

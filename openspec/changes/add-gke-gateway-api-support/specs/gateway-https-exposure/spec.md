@@ -161,7 +161,7 @@ The load balancer SHALL carry KAS WebSocket upgrades over HTTP/1.1 and KAS gRPC 
 
 ### Requirement: Conflicting configuration rejected
 
-The module SHALL reject configurations where the GKE Gateway or the SSH load balancer is enabled together with the NGINX Ingress, or with a GitLab chart version earlier than 10.3, or where the GKE Gateway is enabled without the proxy-only subnet, the gateway certificate or the chart's Envoy Gateway. It SHALL also reject the chart's Envoy Gateway without the standard Gateway API channel on the cluster, and the SSH load balancer together with the chart's own Gateway when the GKE Gateway is not enabled.
+The module SHALL reject configurations where the GKE Gateway or the SSH load balancer is enabled together with the NGINX Ingress, or with a GitLab chart version earlier than 10.3, or where the GKE Gateway is enabled without the proxy-only subnet, the gateway certificate or the chart's Envoy Gateway, or where the SSH load balancer is enabled without the proxy-only subnet. It SHALL also reject the chart's Envoy Gateway without the standard Gateway API channel on the cluster, and the SSH load balancer together with the chart's own Gateway when the GKE Gateway is not enabled.
 
 #### Scenario: NGINX still enabled
 

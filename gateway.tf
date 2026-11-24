@@ -474,6 +474,9 @@ locals {
   shell_neg_name         = "gitlab-shell"
   shell_container_port   = 2222
 
+  # A forwarding rule must use the network tier of its address.
+  gitlab_address_network_tier = var.gitlab_address_name == "" ? google_compute_address.gitlab[0].network_tier : data.google_compute_address.gitlab[0].network_tier
+
   # Service accounts of every node that can run GitLab Shell: the cluster one,
   # also used by auto-provisioned pools, and those set on additional pools.
   shell_node_service_accounts = compact(distinct(concat(
@@ -518,9 +521,8 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
     }
   })
   server_side_apply = true
-  # A deployment that still has the earlier LoadBalancer Service at this
-  # address replaces it: wait until GKE has removed its load balancer and
-  # released port 22 of the GitLab IP.
+  # A delete returns only after Kubernetes has removed the Service. GKE
+  # removes the network endpoint groups later, on its own.
   wait = true
 
   depends_on = [
@@ -600,7 +602,7 @@ resource "google_compute_region_backend_service" "gitlab_shell" {
   lifecycle {
     precondition {
       condition     = length(local.shell_neg_zones) > 0
-      error_message = "GKE has not reported the GitLab Shell network endpoint groups on the ${local.shell_neg_service_name} Service yet. Apply again."
+      error_message = "The ${local.shell_neg_service_name} Service has no cloud.google.com/neg-status annotation with the zones of the GitLab Shell network endpoint groups. On the first apply GKE may need more time: apply again. On a later plan, restore the Service with -target=kubectl_manifest.gitlab_shell_load_balancer, or set gitlab_enable_shell_load_balancer = false."
     }
   }
 }
@@ -621,7 +623,7 @@ resource "google_compute_forwarding_rule" "gitlab_shell" {
   name                  = "gitlab-shell"
   region                = var.region
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  network_tier          = "PREMIUM"
+  network_tier          = local.gitlab_address_network_tier
   ip_protocol           = "TCP"
   port_range            = "22"
   ip_address            = local.gitlab_address

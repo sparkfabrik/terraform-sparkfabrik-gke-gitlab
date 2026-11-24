@@ -13,3 +13,11 @@ mock_resource "google_service_account_key" {
     private_key = "e30="
   }
 }
+
+# The GitLab Shell forwarding rule takes the network tier of the address, and
+# the provider checks its value.
+mock_resource "google_compute_address" {
+  defaults = {
+    network_tier = "PREMIUM"
+  }
+}

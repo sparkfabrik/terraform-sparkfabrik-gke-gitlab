@@ -719,6 +719,7 @@ variable "gitlab_shell_load_balancer_idle_timeout_sec" {
   type        = number
   description = "Idle timeout in seconds of the GitLab Shell (SSH) load balancer: it closes a connection that carries no data for this long. It has no effect when gitlab_enable_shell_load_balancer is false. Default to 3600."
   default     = 3600
+  nullable    = false
 
   validation {
     condition     = var.gitlab_shell_load_balancer_idle_timeout_sec >= 1 && floor(var.gitlab_shell_load_balancer_idle_timeout_sec) == var.gitlab_shell_load_balancer_idle_timeout_sec

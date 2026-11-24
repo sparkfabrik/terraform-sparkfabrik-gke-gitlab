@@ -40,7 +40,7 @@
 
 ## 6. SSH load balancer
 
-- [x] 6.1 Create a Service of type `LoadBalancer` for GitLab Shell on port 22 with `loadBalancerClass: networking.gke.io/l4-regional-external` and the GitLab IP, when `gitlab_enable_shell_load_balancer` is true; verify in the scratch project that `git clone` over SSH works on the GitLab IP while the Gateway serves 443 on the same IP
+- [x] 6.1 Create a Service of type `LoadBalancer` for GitLab Shell on port 22 with `loadBalancerClass: networking.gke.io/l4-regional-external` and the GitLab IP, when `gitlab_enable_shell_load_balancer` is true (replaced by section 9); verify in the scratch project that `git clone` over SSH works on the GitLab IP while the Gateway serves 443 on the same IP
 - [x] 6.2 Document `gitlab_enable_shell_load_balancer` in `README.md` with `make generate_docs`; verify the generated table lists it
 
 ## 7. Example, changelog and integration checks
@@ -63,7 +63,7 @@
 - [x] 8.9 Require `gke_gateway_api_channel = "CHANNEL_STANDARD"` whenever the chart's Envoy Gateway is installed, and disable the chart's shell `TCPRoute` in that case too; verify the plan fails without the channel and the rendered chart has no `TCPRoute`
 - [x] 8.10 Reject `gitlab_enable_shell_load_balancer` together with the chart's own Gateway when `gitlab_gke_gateway` is not set; verify the plan fails
 - [x] 8.11 Add `gitlab_gateway_api_envoy_replicas` and `gitlab_gateway_api_envoy_min_available`, and mirror them for NGINX with `gitlab_ingress_nginx_replicas` and `gitlab_ingress_nginx_min_available`; verify chart 10.5.6 renders the `EnvoyProxy` and the NGINX controller with those values, and no override when they are `null`
-- [x] 8.12 Set `wait` on the Gateway, the SSH Service and the backend policies, so a delete waits for GKE to release the load balancer resources
+- [x] 8.12 Set `wait` on the Gateway, the SSH Service and the backend policies, so a delete waits for GKE to release the load balancer resources (the SSH Service no longer owns a load balancer, see section 9)
 - [x] 8.13 Create the backend Services, their policies and the SSH Service without waiting for the Helm release, and the routes after the backend Services; verify in the dependency graph that none of them depends on `helm_release.gitlab`
 - [x] 8.14 Verify on the test deployment that turning Envoy off brings NGINX back and leaves the Envoy CRDs in place, and that removing the GKE Gateway waits for the load balancer cleanup, then repeat the cutover; verified: rollback 75 s web and 2 min 17 s SSH downtime, CRDs kept with the same UIDs, `wait` blocked about 46 s (SSH) and 60 s (Gateway), the `GatewayClass` finalizer needs a manual removal (documented); second cutover 2 min 20 s web and 2 min 46 s SSH downtime, against 7 min 8 s and about 4.5 min for the first
 - [x] 8.15 Add `gitlab_gke_gateway.log_sample_rate`, setting `logging` on both GCPBackendPolicies when it is not `null`; verify on the test deployment that the backend services get `logConfig.enable: true` and that Cloud Armor verdicts appear in the request logs
@@ -77,3 +77,13 @@
 
 - Get platform team approval on the input design, as required by sparkfabrik-innovation-team/board#5223, before publishing the release.
 - Archive the change after the release is published.
+
+## 9. SSH proxy load balancer
+
+- [x] 9.1 Replace the `LoadBalancer` Service with a ClusterIP Service that carries the `cloud.google.com/neg` annotation, and create the regional external proxy Network Load Balancer on port 22 of the GitLab IP: health check, backend service, target TCP proxy and forwarding rule; verified on the test deployment that pods in the cluster reach ports 443 and 22 of the GitLab IP, and that SSH clone and push work from outside
+- [x] 9.2 Read the zones of the network endpoint groups from the `cloud.google.com/neg-status` annotation, and stop the apply when it is missing; verified on the test deployment that the cutover from NGINX and the replacement of the `LoadBalancer` Service each finish in one apply
+- [x] 9.3 Create a firewall rule that admits the proxy-only subnet and the health check ranges to GitLab Shell on the nodes, selected by the cluster service account and those of the additional node pools
+- [x] 9.4 Add `gitlab_shell_load_balancer_idle_timeout_sec` (default `3600`); verified on the test deployment that a 120-second timeout closes an idle SSH connection after 121 seconds
+- [x] 9.5 Require `gke_proxy_only_subnet_cidr` when `gitlab_enable_shell_load_balancer` is true; verify the plan fails without it
+- [x] 9.6 Verify on the test deployment that turning the SSH load balancer off leaves no network endpoint group; verified: GKE removed them about two minutes after the apply
+- [ ] 9.7 Verify a new deployment from an empty project and its destroy, confirming that no network endpoint group blocks the deletion of the network
