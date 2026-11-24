@@ -639,7 +639,7 @@ variable "gitlab_enable_gateway_api" {
 
 variable "gitlab_gateway_api_install_envoy" {
   type        = bool
-  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. It has no effect when gitlab_enable_gateway_api is false. The module installs the Envoy Gateway CRDs from the configured chart version and never deletes them. GKE must supply the Gateway API CRDs, so it requires gke_gateway_api_channel = CHANNEL_STANDARD and helm_chart_version 10.3 or later. GKE does not serve TCPRoute, so the chart's GitLab Shell route is disabled: expose SSH with gitlab_enable_shell_load_balancer. Default to false."
+  description = "Choose whether to install Envoy Gateway as the Gateway API implementation. When gitlab_enable_gateway_api is false, it installs only the Envoy Gateway controller and its CRDs, with no Gateway: use this state as the first step of a rollback to the NGINX Ingress, so the controller removes the Envoy proxy before a second apply uninstalls it. The module installs the Envoy Gateway CRDs from the configured chart version and never deletes them. GKE must supply the Gateway API CRDs, so it requires gke_gateway_api_channel = CHANNEL_STANDARD and helm_chart_version 10.3 or later. GKE does not serve TCPRoute, so the chart's GitLab Shell route is disabled: expose SSH with gitlab_enable_shell_load_balancer. Default to false."
   default     = false
 }
 

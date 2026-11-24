@@ -31,6 +31,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 - `hashicorp/helm` provider requirement from `~> 2.5` to `~> 3.3`. Update the root module constraint, convert any `provider "helm"` `kubernetes` block to an attribute, and run `terraform init -upgrade`.
 - Envoy Gateway CRDs ownership moves from the GitLab Helm release to Terraform for deployments that already set `gitlab_gateway_api_install_envoy = true`. The release sets `envoy-gateway.crds.enabled = false`.
 - `gitlab_gateway_api_install_envoy = true` now requires `gke_gateway_api_channel = "CHANNEL_STANDARD"` and `helm_chart_version` 10.3 or later, and disables the chart's GitLab Shell `TCPRoute`.
+- `gitlab_gateway_api_install_envoy = true` installs the Envoy Gateway controller and its CRDs also when `gitlab_enable_gateway_api` is `false`.
 - `global.ingress.configureCertmanager` follows `gitlab_enable_certmanager` instead of always being `true`. Deployments that set `gitlab_enable_certmanager = false` and use their own cert-manager must set `gitlab_ingress_configure_certmanager = true`, or the Ingresses switch to self-signed certificates.
 
 ## [2.37.0] - 2026-11-11

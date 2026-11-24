@@ -87,3 +87,9 @@
 - [x] 9.5 Require `gke_proxy_only_subnet_cidr` when `gitlab_enable_shell_load_balancer` is true; verify the plan fails without it
 - [x] 9.6 Verify on the test deployment that turning the SSH load balancer off leaves no network endpoint group; verified: GKE removed them about two minutes after the apply
 - [ ] 9.7 Verify a new deployment from an empty project and its destroy, confirming that no network endpoint group blocks the deletion of the network
+
+## 10. Two-step rollback to NGINX
+
+- [x] 10.1 Keep the Envoy CRD management and the chart's CRD switch tied to `gitlab_gateway_api_install_envoy` alone, so the controller can stay installed with `gitlab_enable_gateway_api = false`; verify chart 10.5.6 renders the controller, no `GatewayClass` and no `Gateway` in that state
+- [x] 10.2 Document the two-step rollback and the hook objects Helm leaves behind in the `gateway_api` example README
+- [ ] 10.3 Verify on the test deployment that the first apply succeeds, that the controller deletes the Envoy proxy and releases the `GatewayClass`, and that the second apply uninstalls the controller

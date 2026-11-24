@@ -413,6 +413,50 @@ run "envoy_replicas_apply_without_the_gke_gateway" {
   }
 }
 
+# First step of a rollback to NGINX: the Gateway is gone, the Envoy Gateway
+# controller stays to clean up after it.
+run "envoy_stays_installed_without_the_gateway_api" {
+  command = apply
+
+  variables {
+    gitlab_enable_gateway_api              = false
+    gitlab_gke_gateway                     = null
+    gitlab_enable_shell_load_balancer      = false
+    gitlab_install_ingress_nginx           = true
+    gitlab_enable_ingress                  = true
+    gitlab_gateway_api_envoy_replicas      = 2
+    gitlab_gateway_api_envoy_min_available = 1
+  }
+
+  assert {
+    condition = (
+      yamldecode(helm_release.gitlab.values[0]).global.gatewayApi.enabled == false &&
+      yamldecode(helm_release.gitlab.values[0]).global.gatewayApi.installEnvoy == true
+    )
+    error_message = "The chart must keep the Envoy Gateway controller and drop its Gateway."
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0])["envoy-gateway"].crds.enabled == false
+    error_message = "The release must not install the chart's CRDs while the controller is installed: the module does, and GKE rejects the Gateway API ones."
+  }
+
+  assert {
+    condition     = length(data.helm_template.envoy_crds) == 1
+    error_message = "The module must keep managing the Envoy Gateway CRDs while the controller is installed."
+  }
+
+  assert {
+    condition     = !contains(keys(yamldecode(helm_release.gitlab.values[0])), "gatewayApiResources")
+    error_message = "Without a Gateway there is no Envoy proxy to give replicas or a PodDisruptionBudget."
+  }
+
+  assert {
+    condition     = length(kubectl_manifest.gke_gateway) == 0 && length(kubectl_manifest.envoy_backend_service) == 0
+    error_message = "Without the Gateway API the module must not create the GKE Gateway."
+  }
+}
+
 # Chart version gates
 
 run "chart_10_3_0_is_the_first_supported_version" {
@@ -470,6 +514,21 @@ run "envoy_requires_the_gke_standard_channel" {
 
   variables {
     gke_gateway_api_channel = null
+  }
+
+  expect_failures = [terraform_data.gateway_api_checks]
+}
+
+run "envoy_without_the_gateway_api_requires_the_gke_standard_channel" {
+  command = plan
+
+  variables {
+    gitlab_enable_gateway_api         = false
+    gitlab_gke_gateway                = null
+    gitlab_enable_shell_load_balancer = false
+    gitlab_install_ingress_nginx      = true
+    gitlab_enable_ingress             = true
+    gke_gateway_api_channel           = null
   }
 
   expect_failures = [terraform_data.gateway_api_checks]

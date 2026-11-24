@@ -10,6 +10,11 @@ Keeps the Envoy Gateway CRDs that the GitLab chart's bundled Envoy Gateway needs
 
 When the GitLab chart's Envoy Gateway is installed through the module, the module SHALL install every `gateway.envoyproxy.io` CRD shipped with the configured GitLab chart version before installing or upgrading the GitLab release.
 
+#### Scenario: Controller without a Gateway
+
+- **WHEN** a consumer keeps the bundled Envoy Gateway installed and turns the Gateway API off, as the first step of a rollback to NGINX
+- **THEN** the module keeps the Envoy Gateway CRDs under its management, and the GitLab release keeps the chart's bundled CRDs off
+
 #### Scenario: First install
 
 - **WHEN** a consumer enables the bundled Envoy Gateway on a cluster with no Envoy CRDs

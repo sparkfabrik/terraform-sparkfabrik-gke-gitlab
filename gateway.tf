@@ -4,7 +4,12 @@
 
 locals {
   gke_gateway_enabled = var.gitlab_gke_gateway != null
-  envoy_enabled       = var.gitlab_enable_gateway_api && var.gitlab_gateway_api_install_envoy
+  # The Envoy Gateway controller and its CRDs can stay installed without the
+  # chart's Gateway. A rollback to NGINX needs that state: the controller must
+  # outlive the Gateway to remove the Envoy proxy and the GatewayClass finalizer.
+  envoy_installed = var.gitlab_gateway_api_install_envoy
+  # The chart's Gateway, served by Envoy.
+  envoy_enabled = var.gitlab_enable_gateway_api && local.envoy_installed
   # Name of the GitLab Helm release. The Kubernetes objects below use this
   # constant, not helm_release.gitlab.name, so that they do not wait for the
   # release: the load balancers are then ready as soon as the pods are.
@@ -30,7 +35,7 @@ locals {
 # Cross-input checks. Variable validations cannot reference other inputs on
 # the Terraform versions this module supports, so they live here.
 resource "terraform_data" "gateway_api_checks" {
-  count = local.gke_load_balancers_enabled || local.envoy_enabled ? 1 : 0
+  count = local.gke_load_balancers_enabled || local.envoy_installed ? 1 : 0
 
   lifecycle {
     precondition {
@@ -51,7 +56,7 @@ resource "terraform_data" "gateway_api_checks" {
     # The module installs only the Envoy Gateway CRDs: the Gateway API CRDs
     # the chart's Envoy resources need must come from GKE.
     precondition {
-      condition     = !local.envoy_enabled || var.gke_gateway_api_channel == "CHANNEL_STANDARD"
+      condition     = !local.envoy_installed || var.gke_gateway_api_channel == "CHANNEL_STANDARD"
       error_message = "gitlab_gateway_api_install_envoy requires gke_gateway_api_channel = \"CHANNEL_STANDARD\": GKE supplies the Gateway API CRDs, and the module installs only the Envoy Gateway CRDs."
     }
 
@@ -179,7 +184,7 @@ locals {
     registry             = { storage = { secret = "placeholder", key = "config" } }
   })
 
-  envoy_crd_documents = local.envoy_enabled ? flatten([
+  envoy_crd_documents = local.envoy_installed ? flatten([
     for file in data.helm_template.envoy_crds[0].crds : [
       for doc in split("\n---", file) : doc if trimspace(trimprefix(trimspace(doc), "---")) != ""
     ]
@@ -192,7 +197,7 @@ locals {
 }
 
 data "helm_template" "envoy_crds" {
-  count = local.envoy_enabled ? 1 : 0
+  count = local.envoy_installed ? 1 : 0
 
   name         = local.gitlab_release_name
   namespace    = var.gitlab_namespace
