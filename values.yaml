@@ -340,7 +340,7 @@ gitlab:
 %{ endif ~}
 %{ if SHELL_LOAD_BALANCER || ENVOY_MODULE_CRDS ~}
     ## GKE does not serve TCPRoute, so the chart's Envoy Gateway cannot route
-    ## SSH: it goes through its own L4 load balancer
+    ## SSH: it goes through its own load balancer
     ## (gitlab_enable_shell_load_balancer), or stays inside the cluster.
     gatewayRoute:
       enabled: false

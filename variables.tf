@@ -371,7 +371,7 @@ variable "gke_services_subnet_cidr" {
 
 variable "gke_proxy_only_subnet_cidr" {
   type        = string
-  description = "CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it. Default to null."
+  description = "CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer and by the GitLab Shell load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it to Envoy, the module the one that admits it to GitLab Shell. Default to null."
   default     = null
 }
 
@@ -711,8 +711,19 @@ variable "gitlab_gke_gateway" {
 
 variable "gitlab_enable_shell_load_balancer" {
   type        = bool
-  description = "Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab_install_ingress_nginx = false. Default to false."
+  description = "Choose whether to expose GitLab Shell (SSH) on port 22 of the GitLab IP through its own regional external proxy Network Load Balancer, and disable the chart's GitLab Shell TCPRoute. The module creates the load balancer, a firewall rule for it and a ClusterIP Service with standalone network endpoint groups of the GitLab Shell pods. Requires gke_proxy_only_subnet_cidr and gitlab_install_ingress_nginx = false. Default to false."
   default     = false
+}
+
+variable "gitlab_shell_load_balancer_idle_timeout_sec" {
+  type        = number
+  description = "Idle timeout in seconds of the GitLab Shell (SSH) load balancer: it closes a connection that carries no data for this long. It has no effect when gitlab_enable_shell_load_balancer is false. Default to 3600."
+  default     = 3600
+
+  validation {
+    condition     = var.gitlab_shell_load_balancer_idle_timeout_sec >= 1 && floor(var.gitlab_shell_load_balancer_idle_timeout_sec) == var.gitlab_shell_load_balancer_idle_timeout_sec
+    error_message = "gitlab_shell_load_balancer_idle_timeout_sec must be a whole number of seconds, 1 or more."
+  }
 }
 
 variable "gitlab_install_kas" {

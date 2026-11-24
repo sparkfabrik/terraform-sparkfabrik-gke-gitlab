@@ -25,6 +25,21 @@ override_module {
   }
 }
 
+# GKE writes the zones of the GitLab Shell network endpoint groups on the
+# Service. A mock leaves the annotations empty.
+override_data {
+  target = data.kubernetes_resource.gitlab_shell_neg
+  values = {
+    object = {
+      metadata = {
+        annotations = {
+          "cloud.google.com/neg-status" = "{\"network_endpoint_groups\":{\"22\":\"gitlab-shell\"},\"zones\":[\"europe-west1-b\",\"europe-west1-c\"]}"
+        }
+      }
+    }
+  }
+}
+
 # A valid GKE Gateway deployment. Each run below changes as few inputs as it needs.
 variables {
   project_id        = "test-project"
@@ -173,10 +188,93 @@ run "http_mode_puts_the_gke_gateway_in_front_of_envoy" {
     error_message = "Without the optional inputs the backend policy must only set the 3600-second timeout."
   }
 
+}
+
+run "shell_load_balancer_is_a_proxy_load_balancer_on_the_gitlab_ip" {
+  command = apply
+
   assert {
-    condition     = yamldecode(kubectl_manifest.gitlab_shell_load_balancer[0].yaml_body).spec.ports[0].port == 22
-    error_message = "The GitLab Shell load balancer must serve port 22."
+    condition = (
+      yamldecode(kubectl_manifest.gitlab_shell_load_balancer[0].yaml_body).spec.type == "ClusterIP" &&
+      !contains(keys(yamldecode(kubectl_manifest.gitlab_shell_load_balancer[0].yaml_body).metadata.annotations), "networking.gke.io/load-balancer-ip-addresses")
+    )
+    error_message = "No Service may hold the GitLab IP: pods could not reach the Gateway on it."
   }
+
+  assert {
+    condition = jsondecode(yamldecode(kubectl_manifest.gitlab_shell_load_balancer[0].yaml_body).metadata.annotations["cloud.google.com/neg"]) == {
+      exposed_ports = { "22" = { name = "gitlab-shell" } }
+    }
+    error_message = "The Service must expose port 22 as the gitlab-shell network endpoint groups."
+  }
+
+  assert {
+    condition = (
+      google_compute_forwarding_rule.gitlab_shell[0].load_balancing_scheme == "EXTERNAL_MANAGED" &&
+      google_compute_forwarding_rule.gitlab_shell[0].ip_protocol == "TCP" &&
+      google_compute_forwarding_rule.gitlab_shell[0].port_range == "22" &&
+      google_compute_forwarding_rule.gitlab_shell[0].ip_address == google_compute_address.gitlab[0].address
+    )
+    error_message = "The forwarding rule must serve TCP port 22 of the GitLab IP as a proxy load balancer."
+  }
+
+  assert {
+    condition = (
+      google_compute_region_backend_service.gitlab_shell[0].protocol == "TCP" &&
+      google_compute_region_backend_service.gitlab_shell[0].load_balancing_scheme == "EXTERNAL_MANAGED" &&
+      google_compute_region_backend_service.gitlab_shell[0].timeout_sec == 3600
+    )
+    error_message = "The backend service must be a TCP proxy backend with the 3600-second idle timeout."
+  }
+
+  assert {
+    condition = toset([for backend in google_compute_region_backend_service.gitlab_shell[0].backend : backend.group]) == toset([
+      "https://www.googleapis.com/compute/v1/projects/test-project/zones/europe-west1-b/networkEndpointGroups/gitlab-shell",
+      "https://www.googleapis.com/compute/v1/projects/test-project/zones/europe-west1-c/networkEndpointGroups/gitlab-shell",
+    ])
+    error_message = "The backend service must use the network endpoint group of every zone GKE reports."
+  }
+
+  assert {
+    condition     = google_compute_region_target_tcp_proxy.gitlab_shell[0].proxy_header == "NONE"
+    error_message = "The PROXY protocol must be off: OpenSSH does not read it."
+  }
+
+  assert {
+    condition = (
+      google_compute_firewall.gitlab_shell_load_balancer[0].source_ranges == toset(["10.129.0.0/23", "35.191.0.0/16", "130.211.0.0/22"]) &&
+      one(google_compute_firewall.gitlab_shell_load_balancer[0].allow).ports == tolist(["2222"]) &&
+      google_compute_firewall.gitlab_shell_load_balancer[0].target_service_accounts == toset(["gitlab@test-project.iam.gserviceaccount.com"])
+    )
+    error_message = "The firewall rule must admit the proxy-only subnet and the health checks to GitLab Shell on the nodes."
+  }
+}
+
+run "shell_load_balancer_idle_timeout_follows_its_input" {
+  command = apply
+
+  variables {
+    gitlab_shell_load_balancer_idle_timeout_sec = 900
+  }
+
+  assert {
+    condition     = google_compute_region_backend_service.gitlab_shell[0].timeout_sec == 900
+    error_message = "The backend service timeout must follow gitlab_shell_load_balancer_idle_timeout_sec."
+  }
+}
+
+# Without the annotation the backend service would have no backend.
+run "shell_load_balancer_waits_for_the_network_endpoint_groups" {
+  command = plan
+
+  override_data {
+    target = data.kubernetes_resource.gitlab_shell_neg
+    values = {
+      object = { metadata = { annotations = {} } }
+    }
+  }
+
+  expect_failures = [google_compute_region_backend_service.gitlab_shell]
 }
 
 run "external_tls_termination_mode_uses_the_chart_setting" {
@@ -281,6 +379,15 @@ run "envoy_replicas_apply_without_the_gke_gateway" {
     condition     = length(kubectl_manifest.gke_gateway) == 0 && length(kubectl_manifest.envoy_backend_service) == 0
     error_message = "Without gitlab_gke_gateway the module must not create the GKE Gateway."
   }
+
+  assert {
+    condition = (
+      length(kubectl_manifest.gitlab_shell_load_balancer) == 0 &&
+      length(google_compute_forwarding_rule.gitlab_shell) == 0 &&
+      length(google_compute_firewall.gitlab_shell_load_balancer) == 0
+    )
+    error_message = "Without gitlab_enable_shell_load_balancer the module must not create the SSH load balancer."
+  }
 }
 
 # Chart version gates
@@ -355,6 +462,20 @@ run "shell_load_balancer_rejects_the_chart_gateway" {
   expect_failures = [terraform_data.gateway_api_checks]
 }
 
+run "shell_load_balancer_requires_the_proxy_only_subnet" {
+  command = plan
+
+  variables {
+    gitlab_gke_gateway                = null
+    gitlab_enable_gateway_api         = false
+    gitlab_gateway_api_install_envoy  = false
+    gitlab_enable_gateway_certificate = false
+    gke_proxy_only_subnet_cidr        = null
+  }
+
+  expect_failures = [terraform_data.gateway_api_checks]
+}
+
 run "envoy_min_available_must_be_lower_than_the_replicas" {
   command = plan
 
@@ -415,6 +536,16 @@ run "log_sample_rate_must_be_between_0_and_1" {
   }
 
   expect_failures = [var.gitlab_gke_gateway]
+}
+
+run "shell_load_balancer_idle_timeout_must_be_positive" {
+  command = plan
+
+  variables {
+    gitlab_shell_load_balancer_idle_timeout_sec = 0
+  }
+
+  expect_failures = [var.gitlab_shell_load_balancer_idle_timeout_sec]
 }
 
 run "gateway_api_channel_must_be_a_supported_channel" {

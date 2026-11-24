@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `gitlab_shell_load_balancer_idle_timeout_sec` variable (default `3600`) setting the idle timeout of the GitLab Shell load balancer.
+
+### Changed
+
+- `gitlab_enable_shell_load_balancer` creates a regional external proxy Network Load Balancer on port 22 of the GitLab IP instead of a `LoadBalancer` Service. The `gitlab-shell-lb` Service is replaced by the `gitlab-shell-neg` ClusterIP Service.
+- `gitlab_enable_shell_load_balancer = true` now requires `gke_proxy_only_subnet_cidr`.
+
+### Fixed
+
+- Pods in the GitLab cluster could not reach ports 443 and 80 of the GitLab IP when `gitlab_enable_shell_load_balancer` was `true`.
+
 ## [3.0.0] - 2026-11-23
 
 ### Added

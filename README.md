@@ -77,7 +77,7 @@ Then perform the following commands on the root folder:
 | gitlab\_enable\_restore\_pv | Enable additional storage for TAR Restoration creation of any appreciable size | `bool` | `false` | no |
 | gitlab\_enable\_service\_desk | Enable Gitlab Service Desk | `bool` | `false` | no |
 | gitlab\_enable\_service\_ping | Enable Gitlab Service Ping | `bool` | `true` | no |
-| gitlab\_enable\_shell\_load\_balancer | Choose whether to expose GitLab Shell (SSH) on its own regional external L4 LoadBalancer Service on the GitLab IP, and disable the chart's GitLab Shell TCPRoute. Requires gitlab\_install\_ingress\_nginx = false. Default to false. | `bool` | `false` | no |
+| gitlab\_enable\_shell\_load\_balancer | Choose whether to expose GitLab Shell (SSH) on port 22 of the GitLab IP through its own regional external proxy Network Load Balancer, and disable the chart's GitLab Shell TCPRoute. The module creates the load balancer, a firewall rule for it and a ClusterIP Service with standalone network endpoint groups of the GitLab Shell pods. Requires gke\_proxy\_only\_subnet\_cidr and gitlab\_install\_ingress\_nginx = false. Default to false. | `bool` | `false` | no |
 | gitlab\_enable\_smtp | Setup Gitlab email address to send email. | `bool` | `false` | no |
 | gitlab\_gateway\_api\_configure\_certmanager | Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab\_enable\_gateway\_api is false. Default to false. | `bool` | `false` | no |
 | gitlab\_gateway\_api\_envoy\_min\_available | Minimum number of Envoy proxy pods that must stay available during voluntary disruptions such as a node drain. When set, the chart's Envoy Gateway creates a PodDisruptionBudget for the Envoy proxy. It must be lower than gitlab\_gateway\_api\_envoy\_replicas, or node drains are blocked. It has no effect unless gitlab\_enable\_gateway\_api and gitlab\_gateway\_api\_install\_envoy are true. Leave null to create no PodDisruptionBudget. | `number` | `null` | no |
@@ -132,6 +132,7 @@ Then perform the following commands on the root folder:
 | gitlab\_service\_desk\_imap\_user | Imap server user for Service Desk Imap Service | `string` | `""` | no |
 | gitlab\_service\_desk\_k8s\_secret | Kubernetes secret name for storing Service Desk Mail account password | `string` | `"gitlab-servicedesk-secret"` | no |
 | gitlab\_service\_desk\_mail\_address | Email Address for Service Desk Service | `string` | `""` | no |
+| gitlab\_shell\_load\_balancer\_idle\_timeout\_sec | Idle timeout in seconds of the GitLab Shell (SSH) load balancer: it closes a connection that carries no data for this long. It has no effect when gitlab\_enable\_shell\_load\_balancer is false. Default to 3600. | `number` | `3600` | no |
 | gitlab\_shell\_request\_cpu | CPU request for the Gitlab Shell container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_shell\_request\_mem | Memory request for the Gitlab Shell container (e.g., 2.5G or 3Gi). Leave null to keep the chart default. | `string` | `null` | no |
 | gitlab\_sidekiq\_request\_cpu | CPU request for the Gitlab sidekiq container (e.g., 300m or 1). Leave null to keep the chart default. | `string` | `null` | no |
@@ -186,7 +187,7 @@ Then perform the following commands on the root folder:
 | gke\_nodes\_subnet\_cidr | Cidr range to use for gitlab GKE nodes subnet | `string` | `"10.10.0.0/16"` | no |
 | gke\_pods\_subnet\_cidr | Cidr range to use for gitlab GKE pods subnet | `string` | `"10.30.0.0/16"` | no |
 | gke\_preemptible | Enable preemptible nodes for the cluster. Default false | `bool` | `false` | no |
-| gke\_proxy\_only\_subnet\_cidr | CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it. Default to null. | `string` | `null` | no |
+| gke\_proxy\_only\_subnet\_cidr | CIDR of the regional proxy-only subnet used by the GKE Gateway regional load balancer and by the GitLab Shell load balancer. When set, the module creates the subnet in the GitLab VPC. The GKE Gateway controller creates the firewall rule that admits it to Envoy, the module the one that admits it to GitLab Shell. Default to null. | `string` | `null` | no |
 | gke\_sc\_gitlab\_backup\_disk | Storage class for Perstistent Volume used for extra space in Backup Cron Job . Default pd-sdd. | `string` | `"standard"` | no |
 | gke\_sc\_gitlab\_restore\_disk | Storage class for Perstistent Volume used for extra space in Backup Restore Job. Default pd-sdd. | `string` | `"standard"` | no |
 | gke\_services\_subnet\_cidr | Cidr range to use for gitlab GKE services subnet | `string` | `"10.20.0.0/16"` | no |

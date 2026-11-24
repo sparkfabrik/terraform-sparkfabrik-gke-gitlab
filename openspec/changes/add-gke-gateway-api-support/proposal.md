@@ -15,7 +15,7 @@ The spike in sparkfabrik-innovation-team/board#5221 recommended going ahead and 
 - **HTTP redirect.** Plain HTTP on port 80 redirects to HTTPS, as NGINX does today.
 - **Envoy Gateway CRDs.** The module installs the Envoy Gateway CRDs taken from the configured GitLab chart version, with server-side apply, and keeps them in step on chart upgrades. GKE supplies the Gateway API CRDs.
 - **Envoy and Workhorse settings.** Envoy keeps encoded slashes unchanged and trusts the load balancer's forwarded headers. Workhorse trusts `X-Forwarded-For` from the proxy-only subnet and the load balancer IP. The load balancer reaches Envoy over HTTP/1.1 for KAS WebSocket and over HTTP/2 for KAS gRPC.
-- **SSH.** The module can expose GitLab Shell on its own regional L4 `LoadBalancer` Service on the same IP.
+- **SSH.** The module can expose GitLab Shell on its own regional proxy Network Load Balancer on the same IP.
 - **Defaults unchanged.** All new inputs default to off. A plan with default inputs shows no changes for existing deployments.
 - **cert-manager follows its input.** The chart's Ingress cert-manager setting follows `gitlab_enable_certmanager`, so consumers can remove cert-manager after moving to the Gateway.
 - **Ingress toggle.** A new input turns off the chart's Ingress resources, which nothing serves once GitLab runs behind the Gateway.
@@ -27,7 +27,7 @@ The spike in sparkfabrik-innovation-team/board#5221 recommended going ahead and 
 
 - `gateway-https-exposure`: exposing GitLab HTTPS traffic (web, API, git over HTTP, KAS) through a GKE regional Application Load Balancer and the bundled Envoy Gateway, including the certificate, Cloud Armor attachment, client IP and protocol handling.
 - `envoy-gateway-crds`: installing and upgrading the Envoy Gateway CRDs that the bundled Envoy Gateway requires on a cluster where GKE manages the Gateway API CRDs.
-- `gitlab-shell-load-balancer`: exposing GitLab Shell (SSH) on its own regional L4 load balancer that shares the GitLab IP.
+- `gitlab-shell-load-balancer`: exposing GitLab Shell (SSH) on its own regional proxy Network Load Balancer that shares the GitLab IP.
 
 ### Modified Capabilities
 
