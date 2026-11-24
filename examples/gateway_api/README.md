@@ -13,7 +13,7 @@ This example deploys GitLab behind a GKE regional Application Load Balancer with
 Move a deployment from the GKE Gateway back to the NGINX Ingress in two applies. The Envoy Gateway controller must outlive the chart's Gateway: it is the controller that deletes the Envoy proxy and removes the finalizer from the `GatewayClass`.
 
 1. Set `gitlab_install_ingress_nginx = true`, `gitlab_enable_ingress = true` and `gitlab_enable_gateway_api = false`, remove `gitlab_gke_gateway`, and set `gitlab_enable_shell_load_balancer = false`. Keep `gitlab_gateway_api_install_envoy = true`. Keep the Gateway API channel, the proxy-only subnet and the gateway certificate, so you can move back to the Gateway later.
-2. Apply. GitLab is unavailable while the Gateway and the SSH load balancer release the IP and NGINX takes it over. The DNS records do not change, because every load balancer uses the same reserved address.
+2. Apply. GitLab is unavailable while the Gateway and the SSH load balancer release the IP and NGINX takes it over: on a test deployment, about 2 minutes 15 seconds for HTTPS and 2 minutes 30 seconds for SSH. The DNS records do not change, because every load balancer uses the same reserved address.
 3. Check that the controller has cleaned up: both commands must return nothing.
 
    ```bash
@@ -25,11 +25,12 @@ Move a deployment from the GKE Gateway back to the NGINX Ingress in two applies.
 
 ### Leftover objects
 
-Helm does not delete the objects that the chart creates through hooks. After step 4 these stay in the GitLab namespace, and you can delete them:
+Helm does not delete the objects that the chart creates through hooks. After step 4 these stay, and you can delete them. They do not prevent enabling the Gateway again.
 
-- The ServiceAccount, Role and RoleBinding `gitlab-envoy-gateway-certgen`.
+- The ServiceAccount, Role and RoleBinding `gitlab-envoy-gateway-certgen` in the GitLab namespace.
 - The ClusterRole and ClusterRoleBinding `gitlab-envoy-gateway-certgen:gitlab`, named after the namespace.
-- The Secrets `envoy`, `envoy-gateway`, `envoy-oidc-hmac` and `envoy-rate-limit`.
+- The MutatingWebhookConfiguration `envoy-gateway-topology-injector.gitlab`, also named after the namespace. Its webhook calls the Service of the removed controller for every pod binding in the namespace. It ignores the failure, so it blocks nothing.
+- The Secrets `envoy`, `envoy-gateway`, `envoy-oidc-hmac` and `envoy-rate-limit` in the GitLab namespace.
 
 ### If the controller was removed with the Gateway
 
