@@ -1,6 +1,6 @@
 # GitLab behind a GKE Gateway
 
-This example deploys GitLab behind a GKE regional Application Load Balancer with a Cloud Armor policy, in front of the chart's bundled Envoy Gateway. SSH runs on its own L4 load balancer on the same IP.
+This example deploys GitLab behind a GKE regional Application Load Balancer with a Cloud Armor policy, in front of the chart's bundled Envoy Gateway. SSH runs on its own proxy Network Load Balancer on the same IP.
 
 ## Usage
 
@@ -10,17 +10,35 @@ This example deploys GitLab behind a GKE regional Application Load Balancer with
 
 ## Roll back to NGINX
 
-To move a deployment from the GKE Gateway back to the NGINX Ingress:
+Move a deployment from the GKE Gateway back to the NGINX Ingress in two applies. The Envoy Gateway controller must outlive the chart's Gateway: it is the controller that deletes the Envoy proxy and removes the finalizer from the `GatewayClass`.
 
-1. Set `gitlab_install_ingress_nginx = true`, `gitlab_enable_ingress = true`, `gitlab_enable_gateway_api = false` and `gitlab_gateway_api_install_envoy = false`, remove `gitlab_gke_gateway`, and set `gitlab_enable_shell_load_balancer = false`. Keep the Gateway API channel, the proxy-only subnet and the gateway certificate, so you can move back to the Gateway later.
-2. Apply. GitLab is unavailable while the Gateway and the SSH load balancer release the IP and NGINX takes it over: on a test deployment, about 75 seconds for HTTPS and about 2 minutes for SSH. The DNS records do not change, because every load balancer uses the same reserved address.
-3. Remove the leftover Envoy objects. The chart deletes the Envoy Gateway controller and its `GatewayClass` together, so the class keeps a finalizer that only the controller removes. It stays in `Terminating`, with the Envoy proxy Deployment, Service and PodDisruptionBudget it owns still running. Remove the finalizer, and Kubernetes then deletes those objects:
+1. Set `gitlab_install_ingress_nginx = true`, `gitlab_enable_ingress = true` and `gitlab_enable_gateway_api = false`, remove `gitlab_gke_gateway`, and set `gitlab_enable_shell_load_balancer = false`. Keep `gitlab_gateway_api_install_envoy = true`. Keep the Gateway API channel, the proxy-only subnet and the gateway certificate, so you can move back to the Gateway later.
+2. Apply. GitLab is unavailable while the Gateway and the SSH load balancer release the IP and NGINX takes it over: on a test deployment, about 2 minutes 15 seconds for HTTPS and 2 minutes 30 seconds for SSH. The DNS records do not change, because every load balancer uses the same reserved address.
+3. Check that the controller has cleaned up: both commands must return nothing.
 
    ```bash
-   kubectl patch gatewayclass gitlab-gw --type=json \
-     -p='[{"op":"remove","path":"/metadata/finalizers"}]'
+   kubectl get gatewayclass gitlab-gw
+   kubectl -n gitlab get deploy,svc,pdb,sa,cm -l gateway.envoyproxy.io/owning-gateway-name=gitlab-gw
    ```
 
-   Do this before you enable the Gateway again. Otherwise the new controller removes the finalizer, and the class the chart recreates is deleted with it.
+4. Set `gitlab_gateway_api_install_envoy = false` and apply. The module leaves the Envoy Gateway CRDs in the cluster.
 
-The module keeps the Envoy Gateway CRDs in the cluster when Envoy is turned off.
+### Leftover objects
+
+Helm does not delete the objects that the chart creates through hooks. After step 4 these stay, and you can delete them. They do not prevent enabling the Gateway again.
+
+- The ServiceAccount, Role and RoleBinding `gitlab-envoy-gateway-certgen` in the GitLab namespace.
+- The ClusterRole and ClusterRoleBinding `gitlab-envoy-gateway-certgen:gitlab`, named after the namespace.
+- The MutatingWebhookConfiguration `envoy-gateway-topology-injector.gitlab`, also named after the namespace. Its webhook calls the Service of the removed controller for every pod binding in the namespace. It ignores the failure, so it blocks nothing.
+- The Secrets `envoy`, `envoy-gateway`, `envoy-oidc-hmac` and `envoy-rate-limit` in the GitLab namespace.
+
+### If the controller was removed with the Gateway
+
+Turning `gitlab_enable_gateway_api` and `gitlab_gateway_api_install_envoy` off in the same apply removes the controller before it can clean up. The `GatewayClass` then stays in `Terminating`, with the Envoy proxy Deployment, Service and PodDisruptionBudget it owns still running. Remove the finalizer, and Kubernetes deletes those objects:
+
+```bash
+kubectl patch gatewayclass gitlab-gw --type=json \
+  -p='[{"op":"remove","path":"/metadata/finalizers"}]'
+```
+
+Do this before you enable the Gateway again. Otherwise the new controller removes the finalizer, and the class the chart recreates is deleted with it.

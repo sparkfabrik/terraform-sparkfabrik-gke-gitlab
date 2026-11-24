@@ -4,7 +4,12 @@
 
 locals {
   gke_gateway_enabled = var.gitlab_gke_gateway != null
-  envoy_enabled       = var.gitlab_enable_gateway_api && var.gitlab_gateway_api_install_envoy
+  # The Envoy Gateway controller and its CRDs can stay installed without the
+  # chart's Gateway. A rollback to NGINX needs that state: the controller must
+  # outlive the Gateway to remove the Envoy proxy and the GatewayClass finalizer.
+  envoy_installed = var.gitlab_gateway_api_install_envoy
+  # The chart's Gateway, served by Envoy.
+  envoy_enabled = var.gitlab_enable_gateway_api && local.envoy_installed
   # Name of the GitLab Helm release. The Kubernetes objects below use this
   # constant, not helm_release.gitlab.name, so that they do not wait for the
   # release: the load balancers are then ready as soon as the pods are.
@@ -30,7 +35,7 @@ locals {
 # Cross-input checks. Variable validations cannot reference other inputs on
 # the Terraform versions this module supports, so they live here.
 resource "terraform_data" "gateway_api_checks" {
-  count = local.gke_load_balancers_enabled || local.envoy_enabled ? 1 : 0
+  count = local.gke_load_balancers_enabled || local.envoy_installed ? 1 : 0
 
   lifecycle {
     precondition {
@@ -51,7 +56,7 @@ resource "terraform_data" "gateway_api_checks" {
     # The module installs only the Envoy Gateway CRDs: the Gateway API CRDs
     # the chart's Envoy resources need must come from GKE.
     precondition {
-      condition     = !local.envoy_enabled || var.gke_gateway_api_channel == "CHANNEL_STANDARD"
+      condition     = !local.envoy_installed || var.gke_gateway_api_channel == "CHANNEL_STANDARD"
       error_message = "gitlab_gateway_api_install_envoy requires gke_gateway_api_channel = \"CHANNEL_STANDARD\": GKE supplies the Gateway API CRDs, and the module installs only the Envoy Gateway CRDs."
     }
 
@@ -71,6 +76,11 @@ resource "terraform_data" "gateway_api_checks" {
     precondition {
       condition     = !local.gke_gateway_enabled || var.gke_proxy_only_subnet_cidr != null
       error_message = "gitlab_gke_gateway requires gke_proxy_only_subnet_cidr."
+    }
+
+    precondition {
+      condition     = !var.gitlab_enable_shell_load_balancer || var.gke_proxy_only_subnet_cidr != null
+      error_message = "gitlab_enable_shell_load_balancer requires gke_proxy_only_subnet_cidr: the SSH load balancer is a regional proxy Network Load Balancer."
     }
 
     precondition {
@@ -106,8 +116,9 @@ locals {
   ) : {}
 }
 
-# Proxy-only subnet for the regional Application Load Balancer. The GKE
-# Gateway controller creates the firewall rule that admits it.
+# Proxy-only subnet for the regional load balancers: the GKE Gateway and the
+# GitLab Shell load balancer. The GKE Gateway controller creates the firewall
+# rule that admits it to Envoy.
 resource "google_compute_subnetwork" "proxy_only" {
   count = var.gke_proxy_only_subnet_cidr != null ? 1 : 0
 
@@ -173,7 +184,7 @@ locals {
     registry             = { storage = { secret = "placeholder", key = "config" } }
   })
 
-  envoy_crd_documents = local.envoy_enabled ? flatten([
+  envoy_crd_documents = local.envoy_installed ? flatten([
     for file in data.helm_template.envoy_crds[0].crds : [
       for doc in split("\n---", file) : doc if trimspace(trimprefix(trimspace(doc), "---")) != ""
     ]
@@ -186,7 +197,7 @@ locals {
 }
 
 data "helm_template" "envoy_crds" {
-  count = local.envoy_enabled ? 1 : 0
+  count = local.envoy_installed ? 1 : 0
 
   name         = local.gitlab_release_name
   namespace    = var.gitlab_namespace
@@ -458,8 +469,33 @@ resource "kubectl_manifest" "gke_gateway_routes" {
   ]
 }
 
-# GitLab Shell on its own regional L4 load balancer, sharing the GitLab IP
-# with the GKE Gateway on a different port.
+# GitLab Shell on its own regional external proxy Network Load Balancer,
+# sharing the GitLab IP with the GKE Gateway on a different port. Terraform
+# creates the load balancer: a LoadBalancer Service would carry the GitLab IP
+# in its status, the nodes would then handle every pod connection to that IP
+# themselves, and pods could not reach the Gateway on ports 443 and 80.
+locals {
+  shell_neg_service_name = "gitlab-shell-neg"
+  shell_neg_name         = "gitlab-shell"
+  shell_container_port   = 2222
+
+  # A forwarding rule must use the network tier of its address.
+  gitlab_address_network_tier = var.gitlab_address_name == "" ? google_compute_address.gitlab[0].network_tier : data.google_compute_address.gitlab[0].network_tier
+
+  # Service accounts of every node that can run GitLab Shell: the cluster one,
+  # also used by auto-provisioned pools, and those set on additional pools.
+  shell_node_service_accounts = compact(distinct(concat(
+    [module.gke.service_account],
+    [for pool in var.gke_additional_node_pools : lookup(pool, "service_account", "")],
+  )))
+
+  # GKE writes the zones of the network endpoint groups on the Service.
+  shell_neg_status = try(jsondecode(data.kubernetes_resource.gitlab_shell_neg[0].object.metadata.annotations["cloud.google.com/neg-status"]), {})
+  shell_neg_zones  = toset(try(local.shell_neg_status.zones, []))
+}
+
+# ClusterIP Service whose only job is to make GKE create one standalone zonal
+# network endpoint group of the GitLab Shell pods in every zone with nodes.
 resource "kubectl_manifest" "gitlab_shell_load_balancer" {
   count = var.gitlab_enable_shell_load_balancer ? 1 : 0
 
@@ -467,16 +503,16 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
     apiVersion = "v1"
     kind       = "Service"
     metadata = {
-      name      = "gitlab-shell-lb"
+      name      = local.shell_neg_service_name
       namespace = var.gitlab_namespace
       annotations = {
-        "networking.gke.io/load-balancer-ip-addresses" = local.gitlab_address_name
-        "cloud.google.com/network-tier"                = "Premium"
+        "cloud.google.com/neg" = jsonencode({
+          exposed_ports = { "22" = { name = local.shell_neg_name } }
+        })
       }
     }
     spec = {
-      type              = "LoadBalancer"
-      loadBalancerClass = "networking.gke.io/l4-regional-external"
+      type = "ClusterIP"
       selector = {
         app     = "gitlab-shell"
         release = local.gitlab_release_name
@@ -485,18 +521,144 @@ resource "kubectl_manifest" "gitlab_shell_load_balancer" {
         name       = "ssh"
         port       = 22
         protocol   = "TCP"
-        targetPort = 2222
+        targetPort = local.shell_container_port
       }]
     }
   })
   server_side_apply = true
-  # On delete, wait until GKE has removed the load balancer resources and
-  # released the object. The subnet, the address and the Cloud Armor policy
-  # they use are deleted next.
+  # A delete returns only after Kubernetes has removed the Service. GKE
+  # removes the network endpoint groups later, on its own.
   wait = true
 
   depends_on = [
     terraform_data.gateway_api_checks,
     kubernetes_namespace.gitlab_namespace,
   ]
+}
+
+# GKE creates the network endpoint groups shortly after the Service.
+resource "time_sleep" "gitlab_shell_neg" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  create_duration = "60s"
+
+  triggers = {
+    service_uid = kubectl_manifest.gitlab_shell_load_balancer[0].uid
+  }
+}
+
+data "kubernetes_resource" "gitlab_shell_neg" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  api_version = "v1"
+  kind        = "Service"
+
+  metadata {
+    name      = local.shell_neg_service_name
+    namespace = var.gitlab_namespace
+  }
+
+  depends_on = [time_sleep.gitlab_shell_neg]
+}
+
+resource "google_compute_region_health_check" "gitlab_shell" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  name               = "gitlab-shell"
+  region             = var.region
+  check_interval_sec = 10
+  timeout_sec        = 5
+
+  tcp_health_check {
+    port_specification = "USE_SERVING_PORT"
+  }
+
+  depends_on = [module.project_services.project_id]
+}
+
+resource "google_compute_region_backend_service" "gitlab_shell" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  name                  = "gitlab-shell"
+  region                = var.region
+  protocol              = "TCP"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  health_checks         = [google_compute_region_health_check.gitlab_shell[0].id]
+  # On a proxy Network Load Balancer this is the idle timeout of a connection.
+  timeout_sec = var.gitlab_shell_load_balancer_idle_timeout_sec
+  # Time a pod that leaves the load balancer has to finish its Git operations.
+  connection_draining_timeout_sec = 30
+
+  # The groups are referenced by name: GKE owns them, and a data source would
+  # fail the plan before the Service exists. A zone that gets its first node
+  # later is added by the next apply.
+  dynamic "backend" {
+    for_each = local.shell_neg_zones
+
+    content {
+      group          = "https://www.googleapis.com/compute/v1/projects/${var.project_id}/zones/${backend.value}/networkEndpointGroups/${local.shell_neg_name}"
+      balancing_mode = "CONNECTION"
+      # Balancing target, not a limit.
+      max_connections_per_endpoint = 100
+      capacity_scaler              = 1
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(local.shell_neg_zones) > 0
+      error_message = "The ${local.shell_neg_service_name} Service has no cloud.google.com/neg-status annotation with the zones of the GitLab Shell network endpoint groups. On the first apply GKE may need more time: apply again. On a later plan, restore the Service with -target=kubectl_manifest.gitlab_shell_load_balancer, or set gitlab_enable_shell_load_balancer = false."
+    }
+  }
+}
+
+resource "google_compute_region_target_tcp_proxy" "gitlab_shell" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  name            = "gitlab-shell"
+  region          = var.region
+  backend_service = google_compute_region_backend_service.gitlab_shell[0].id
+  # OpenSSH, the chart's default SSH daemon, does not read the PROXY protocol.
+  proxy_header = "NONE"
+}
+
+resource "google_compute_forwarding_rule" "gitlab_shell" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  name                  = "gitlab-shell"
+  region                = var.region
+  load_balancing_scheme = "EXTERNAL_MANAGED"
+  network_tier          = local.gitlab_address_network_tier
+  ip_protocol           = "TCP"
+  port_range            = "22"
+  ip_address            = local.gitlab_address
+  network               = google_compute_network.gitlab.id
+  target                = google_compute_region_target_tcp_proxy.gitlab_shell[0].id
+
+  depends_on = [
+    google_compute_subnetwork.proxy_only,
+    # A release that removes the NGINX Ingress frees port 22 of the GitLab IP.
+    helm_release.gitlab,
+  ]
+}
+
+# The load balancer proxies connect from the proxy-only subnet, the health
+# check probes from the Google ranges.
+resource "google_compute_firewall" "gitlab_shell_load_balancer" {
+  count = var.gitlab_enable_shell_load_balancer ? 1 : 0
+
+  name          = "gitlab-shell-load-balancer"
+  description   = "GitLab Shell load balancer and its health checks to the GKE nodes"
+  network       = google_compute_network.gitlab.name
+  direction     = "INGRESS"
+  source_ranges = compact([var.gke_proxy_only_subnet_cidr, "35.191.0.0/16", "130.211.0.0/22"])
+
+  target_service_accounts = local.shell_node_service_accounts
+
+  allow {
+    protocol = "tcp"
+    ports    = [tostring(local.shell_container_port)]
+  }
+
+  depends_on = [terraform_data.gateway_api_checks]
 }

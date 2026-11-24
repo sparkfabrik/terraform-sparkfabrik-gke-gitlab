@@ -684,7 +684,7 @@ locals {
     ENABLE_GATEWAY_API                = var.gitlab_enable_gateway_api
     GATEWAY_API_INSTALL_ENVOY         = var.gitlab_gateway_api_install_envoy
     GATEWAY_API_CONFIGURE_CERTMANAGER = var.gitlab_gateway_api_configure_certmanager
-    ENVOY_MODULE_CRDS                 = local.envoy_enabled
+    ENVOY_MODULE_CRDS                 = local.envoy_installed
     GKE_GATEWAY                       = local.gke_gateway_enabled
     GKE_GATEWAY_EXTERNAL_TLS          = local.gke_gateway_external_tls
     ENVOY_REPLICAS                    = local.envoy_enabled && var.gitlab_gateway_api_envoy_replicas != null ? tostring(var.gitlab_gateway_api_envoy_replicas) : ""
