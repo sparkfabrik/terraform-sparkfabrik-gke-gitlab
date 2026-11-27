@@ -28,9 +28,6 @@ global:
     apiVersion: networking.k8s.io/v1
     configureCertmanager: ${INGRESS_CONFIGURE_CERTMANAGER}
     enabled: ${ENABLE_INGRESS}
-    ## Without Ingresses nothing uses the wildcard certificate: with TLS on and
-    ## configureCertmanager off, the chart's shared-secrets hook would still
-    ## create a self-signed one.
     tls:
       enabled: ${ENABLE_INGRESS}
 

@@ -238,6 +238,31 @@ run "certmanager_email_must_not_be_empty" {
   expect_failures = [helm_release.gitlab]
 }
 
+run "certmanager_email_must_not_be_blank" {
+  command = plan
+
+  variables {
+    certmanager_email = "   "
+  }
+
+  expect_failures = [helm_release.gitlab]
+}
+
+# A blank email counts as not set, so it never reaches the values as a null.
+run "blank_certmanager_email_is_left_out_without_certmanager" {
+  command = apply
+
+  variables {
+    gitlab_enable_certmanager = false
+    certmanager_email         = "   "
+  }
+
+  assert {
+    condition     = !can(yamldecode(helm_release.gitlab.values[0])["certmanager-issuer"])
+    error_message = "certmanager-issuer must be left out of the values when certmanager_email is blank."
+  }
+}
+
 run "certmanager_email_is_required_with_an_external_certmanager" {
   command = plan
 
