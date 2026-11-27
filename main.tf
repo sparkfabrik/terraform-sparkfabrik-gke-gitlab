@@ -652,6 +652,13 @@ locals {
     }))
   }
 
+  # Null follows gitlab_enable_certmanager.
+  ingress_configure_certmanager = coalesce(var.gitlab_ingress_configure_certmanager, var.gitlab_enable_certmanager)
+  # The chart creates an ACME Issuer, which needs the email, when cert-manager
+  # issues the Ingress or the Gateway API certificates.
+  certmanager_email_required = local.ingress_configure_certmanager || var.gitlab_gateway_api_configure_certmanager
+  certmanager_email          = var.certmanager_email == null ? "" : var.certmanager_email
+
   gitlab_release_helm_values_vars = {
     # Hosts, project and logging
     DOMAIN     = local.domain
@@ -675,10 +682,10 @@ locals {
     ENABLE_INGRESS      = var.gitlab_enable_ingress
 
     # cert-manager
-    ENABLE_CERT_MANAGER = var.gitlab_enable_certmanager
-    # Null follows gitlab_enable_certmanager.
-    INGRESS_CONFIGURE_CERTMANAGER = coalesce(var.gitlab_ingress_configure_certmanager, var.gitlab_enable_certmanager)
-    CERT_MANAGER_EMAIL            = var.certmanager_email
+    ENABLE_CERT_MANAGER           = var.gitlab_enable_certmanager
+    INGRESS_CONFIGURE_CERTMANAGER = local.ingress_configure_certmanager
+    # An empty string leaves certmanager-issuer out of the values.
+    CERT_MANAGER_EMAIL = local.certmanager_email
 
     # Gateway API, see gateway.tf
     ENABLE_GATEWAY_API                = var.gitlab_enable_gateway_api
@@ -827,6 +834,15 @@ resource "helm_release" "gitlab" {
   timeout    = 600
 
   values = [local.gitlab_release_helm_values]
+
+  lifecycle {
+    # Variable validations cannot reference other inputs on the Terraform
+    # versions this module supports.
+    precondition {
+      condition     = !local.certmanager_email_required || trimspace(local.certmanager_email) != ""
+      error_message = "certmanager_email is required when cert-manager issues the Ingress certificates (gitlab_ingress_configure_certmanager, which follows gitlab_enable_certmanager when null) or the Gateway API certificates (gitlab_gateway_api_configure_certmanager)."
+    }
+  }
 
   depends_on = [
     google_redis_instance.gitlab,

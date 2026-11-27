@@ -576,7 +576,8 @@ variable "gcp_existing_servicedesk_secret_name" {
 
 variable "certmanager_email" {
   type        = string
-  description = "Email used to retrieve SSL certificates from Let's Encrypt"
+  description = "Email used to retrieve SSL certificates from Let's Encrypt. Required when cert-manager issues the Ingress certificates (gitlab_ingress_configure_certmanager, which follows gitlab_enable_certmanager when null) or the Gateway API certificates (gitlab_gateway_api_configure_certmanager). Default to null."
+  default     = null
 }
 
 variable "gitlab_install_runner" {

@@ -33,7 +33,7 @@ Then perform the following commands on the root folder:
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| certmanager\_email | Email used to retrieve SSL certificates from Let's Encrypt | `string` | n/a | yes |
+| certmanager\_email | Email used to retrieve SSL certificates from Let's Encrypt. Required when cert-manager issues the Ingress certificates (gitlab\_ingress\_configure\_certmanager, which follows gitlab\_enable\_certmanager when null) or the Gateway API certificates (gitlab\_gateway\_api\_configure\_certmanager). Default to null. | `string` | `null` | no |
 | cloud\_nat\_dynamic\_port\_allocation | Enable Dynamic Port Allocation. If cloud\_nat\_min\_ports\_per\_vm is set, cloud\_nat\_min\_ports\_per\_vm must be set to a power of two greater than or equal to 32. | `bool` | `false` | no |
 | cloud\_nat\_endpoint\_independent\_mapping | Specifies if endpoint independent mapping is enabled. | `bool` | `false` | no |
 | cloud\_nat\_log\_config\_enable | Indicates whether or not to export logs. | `bool` | `false` | no |

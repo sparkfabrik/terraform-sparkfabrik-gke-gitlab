@@ -28,8 +28,11 @@ global:
     apiVersion: networking.k8s.io/v1
     configureCertmanager: ${INGRESS_CONFIGURE_CERTMANAGER}
     enabled: ${ENABLE_INGRESS}
+    ## Without Ingresses nothing uses the wildcard certificate: with TLS on and
+    ## configureCertmanager off, the chart's shared-secrets hook would still
+    ## create a self-signed one.
     tls:
-      enabled: true
+      enabled: ${ENABLE_INGRESS}
 
   ## doc/charts/globals.md#configure-postgresql-settings
   psql:
@@ -177,9 +180,11 @@ global:
     GITLAB_LOG_LEVEL: ${LOG_LEVEL}
 %{ endif ~}
 
+%{ if CERT_MANAGER_EMAIL != "" ~}
 ## Settings to for the Let's Encrypt ACME Issuer
 certmanager-issuer:
   email: ${CERT_MANAGER_EMAIL}
+%{ endif ~}
 
 ## Installation of certmananger.
 ## This value replaces `certmanager.install` to allow certmanager schema validation to pass.

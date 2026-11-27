@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/) and this
 project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- `certmanager_email` is optional (default `null`). It stays required when `gitlab_ingress_configure_certmanager` (which follows `gitlab_enable_certmanager` when `null`) or `gitlab_gateway_api_configure_certmanager` is `true`.
+- `certmanager-issuer.email` is left out of the Helm values when `certmanager_email` is not set.
+- `global.ingress.tls.enabled` follows `gitlab_enable_ingress` instead of always being `true`. With `gitlab_enable_ingress = false` and `global.ingress.configureCertmanager` off, the chart no longer runs the hook Job that creates the self-signed `<release>-wildcard-tls` Secrets. Secrets it already created stay in the cluster.
+
 ## [3.0.0] - 2026-11-23
 
 ### Added
