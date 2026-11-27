@@ -576,7 +576,8 @@ variable "gcp_existing_servicedesk_secret_name" {
 
 variable "certmanager_email" {
   type        = string
-  description = "Email used to retrieve SSL certificates from Let's Encrypt"
+  description = "Email used to retrieve SSL certificates from Let's Encrypt. Required when cert-manager issues the Ingress certificates (gitlab_ingress_configure_certmanager, which follows gitlab_enable_certmanager when null) or the Gateway API certificates (gitlab_gateway_api_configure_certmanager). Default to null."
+  default     = null
 }
 
 variable "gitlab_install_runner" {
@@ -627,7 +628,7 @@ variable "gitlab_ingress_nginx_min_available" {
 
 variable "gitlab_enable_ingress" {
   type        = bool
-  description = "Choose whether the GitLab chart creates its Ingress resources (global.ingress.enabled). Set it to false when GitLab is exposed through the Gateway API and no Ingress controller runs, so cert-manager does not keep renewing certificates for unused Ingresses. Default to true."
+  description = "Choose whether the GitLab chart creates its Ingress resources (global.ingress.enabled). Set it to false when GitLab is exposed through the Gateway API and no Ingress controller runs, so cert-manager does not keep renewing certificates for unused Ingresses. It also sets global.ingress.tls.enabled, so with false the chart creates no self-signed wildcard certificate for the Ingresses. Default to true."
   default     = true
 }
 
@@ -667,7 +668,7 @@ variable "gitlab_gateway_api_envoy_min_available" {
 
 variable "gitlab_gateway_api_configure_certmanager" {
   type        = bool
-  description = "Choose whether cert-manager issues the certificate used by the Gateway API listeners. It has no effect when gitlab_enable_gateway_api is false. Default to false."
+  description = "Choose whether cert-manager issues the certificate used by the Gateway API listeners. It requires certmanager_email: chart 10 creates the ACME Issuer for these certificates also when gitlab_enable_gateway_api is false. Default to false."
   default     = false
 }
 

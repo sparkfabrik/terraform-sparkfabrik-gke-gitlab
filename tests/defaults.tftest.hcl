@@ -152,6 +152,142 @@ run "ingress_certmanager_can_be_turned_off_alone" {
   }
 }
 
+# Ingress TLS and the chart's self-signed certificate Job
+
+run "ingress_tls_is_enabled_by_default" {
+  command = apply
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.tls.enabled == true
+    error_message = "global.ingress.tls.enabled must be true by default."
+  }
+}
+
+# With TLS on and configureCertmanager off, the chart's shared-secrets hook
+# creates a self-signed wildcard certificate that nothing uses.
+run "ingress_tls_follows_gitlab_enable_ingress" {
+  command = apply
+
+  variables {
+    gitlab_enable_ingress     = false
+    gitlab_enable_certmanager = false
+    certmanager_email         = null
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0]).global.ingress.tls.enabled == false
+    error_message = "global.ingress.tls.enabled must follow gitlab_enable_ingress."
+  }
+}
+
+# certmanager_email
+
+run "certmanager_email_is_rendered_when_set" {
+  command = apply
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0])["certmanager-issuer"].email == "test@example.com"
+    error_message = "certmanager-issuer.email must follow certmanager_email."
+  }
+}
+
+run "certmanager_email_is_optional_without_certmanager" {
+  command = apply
+
+  variables {
+    gitlab_enable_certmanager = false
+    certmanager_email         = null
+  }
+
+  assert {
+    condition     = !can(yamldecode(helm_release.gitlab.values[0])["certmanager-issuer"])
+    error_message = "certmanager-issuer must be left out of the values when certmanager_email is null."
+  }
+}
+
+run "certmanager_email_is_still_rendered_without_certmanager" {
+  command = apply
+
+  variables {
+    gitlab_enable_certmanager = false
+  }
+
+  assert {
+    condition     = yamldecode(helm_release.gitlab.values[0])["certmanager-issuer"].email == "test@example.com"
+    error_message = "certmanager-issuer.email must follow certmanager_email when cert-manager is off."
+  }
+}
+
+run "certmanager_email_is_required_by_default" {
+  command = plan
+
+  variables {
+    certmanager_email = null
+  }
+
+  expect_failures = [helm_release.gitlab]
+}
+
+run "certmanager_email_must_not_be_empty" {
+  command = plan
+
+  variables {
+    certmanager_email = ""
+  }
+
+  expect_failures = [helm_release.gitlab]
+}
+
+run "certmanager_email_must_not_be_blank" {
+  command = plan
+
+  variables {
+    certmanager_email = "   "
+  }
+
+  expect_failures = [helm_release.gitlab]
+}
+
+# A blank email counts as not set, so it never reaches the values as a null.
+run "blank_certmanager_email_is_left_out_without_certmanager" {
+  command = apply
+
+  variables {
+    gitlab_enable_certmanager = false
+    certmanager_email         = "   "
+  }
+
+  assert {
+    condition     = !can(yamldecode(helm_release.gitlab.values[0])["certmanager-issuer"])
+    error_message = "certmanager-issuer must be left out of the values when certmanager_email is blank."
+  }
+}
+
+run "certmanager_email_is_required_with_an_external_certmanager" {
+  command = plan
+
+  variables {
+    gitlab_enable_certmanager            = false
+    gitlab_ingress_configure_certmanager = true
+    certmanager_email                    = null
+  }
+
+  expect_failures = [helm_release.gitlab]
+}
+
+# The chart's Gateway API Issuer needs the email too.
+run "certmanager_email_is_required_for_the_gateway_api_certificates" {
+  command = plan
+
+  variables {
+    gitlab_enable_certmanager                = false
+    gitlab_gateway_api_configure_certmanager = true
+    certmanager_email                        = null
+  }
+
+  expect_failures = [helm_release.gitlab]
+}
+
 # NGINX Ingress controller replicas and PodDisruptionBudget
 
 run "nginx_replicas_and_min_available_follow_their_inputs" {
